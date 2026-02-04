@@ -253,17 +253,14 @@ export function CreatePage({ context }: CreatePageProps) {
 
   if (!context.wallet) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
-          <Wallet className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-          <h2 className="text-2xl font-bold mb-2">Connect Your Wallet</h2>
-          <p className="text-gray-400 mb-6">
+      <div className="app-connect-prompt">
+        <div className="app-connect-prompt-inner">
+          <Wallet className="app-connect-prompt-icon w-16 h-16" />
+          <h2 className="app-connect-prompt-title">Connect Your Wallet</h2>
+          <p className="app-connect-prompt-desc">
             Please connect your wallet to create collections and mint NFTs
           </p>
-          <button
-            onClick={context.connectWallet}
-            className="px-8 py-3 bg-[#00FFFF] text-black rounded-lg hover:bg-[#00DDDD] transition-colors font-medium"
-          >
+          <button type="button" onClick={context.connectWallet} className="app-btn app-btn--primary">
             Connect Wallet
           </button>
         </div>

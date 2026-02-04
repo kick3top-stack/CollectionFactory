@@ -378,30 +378,31 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-[#1a1a1a] rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-800">
-        {/* Close button */}
-        <div className="sticky top-0 bg-[#1a1a1a] border-b border-gray-800 p-4 flex justify-between items-center z-10">
-          <h2 className="text-2xl font-bold">NFT Details</h2>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+      <div className="bg-[#1a1a1a] rounded-t-2xl sm:rounded-2xl max-w-4xl w-full h-[90dvh] sm:max-h-[90vh] sm:h-auto flex flex-col border border-gray-800 border-b-0 sm:border-b">
+        {/* Close button - touch friendly */}
+        <div className="sticky top-0 bg-[#1a1a1a] border-b border-gray-800 p-3 sm:p-4 flex justify-between items-center z-10 shrink-0">
+          <h2 className="text-xl sm:text-2xl font-bold truncate pr-2">NFT Details</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            className="p-3 -m-1 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/10 active:bg-white/15 rounded-lg transition-colors"
+            aria-label="Close"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 p-4 sm:p-6 overflow-y-auto min-h-0">
           {/* Image */}
-          <div className="aspect-square rounded-xl overflow-hidden">
+          <div className="aspect-square max-w-sm mx-auto w-full md:max-w-none rounded-xl overflow-hidden shrink-0">
             <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
           </div>
 
           {/* Details */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6 min-w-0">
             <div>
-              <h3 className="text-3xl font-bold mb-2">{nft.name}</h3>
-              <p className="text-gray-400">{nft.description}</p>
+              <h3 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{nft.name}</h3>
+              <p className="text-gray-400 text-sm sm:text-base break-words">{nft.description}</p>
             </div>
 
             {/* Status Badge */}

@@ -17,7 +17,7 @@ export function AlertModal({ message, type, onClose }: AlertModalProps) {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 pointer-events-none">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[calc(5rem+env(safe-area-inset-top,0px))] px-4 sm:px-6 pointer-events-none">
       <div className="pointer-events-auto bg-[#1a1a1a] border border-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-slide-down">
         <div className="p-4 flex items-start gap-3">
           {type === 'success' ? (
@@ -37,7 +37,8 @@ export function AlertModal({ message, type, onClose }: AlertModalProps) {
 
           <button
             onClick={onClose}
-            className="p-1 hover:bg-white/10 rounded transition-colors flex-shrink-0"
+            className="p-2 -m-1 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-white/10 active:bg-white/15 rounded transition-colors flex-shrink-0"
+            aria-label="Close"
           >
             <X className="w-5 h-5 text-gray-400" />
           </button>

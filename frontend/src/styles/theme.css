@@ -1,0 +1,92 @@
+/**
+ * NFT Marketplace — Design tokens
+ * Single source of truth for colors, spacing, typography, and radii.
+ * Change values here to update the whole app.
+ */
+:root {
+  /* Backgrounds */
+  --app-bg: #0d0d0d;
+  --app-surface: #161616;
+  --app-surface-elevated: #1e1e1e;
+  --app-overlay: rgba(0, 0, 0, 0.8);
+
+  /* Borders */
+  --app-border: #2a2a2a;
+  --app-border-focus: var(--app-primary);
+
+  /* Brand / Primary (cyan) */
+  --app-primary: #00ffff;
+  --app-primary-hover: #00dddd;
+  --app-primary-muted: rgba(0, 255, 255, 0.1);
+  --app-primary-border: rgba(0, 255, 255, 0.3);
+
+  /* Text */
+  --app-text: #f5f5f5;
+  --app-text-muted: #a3a3a3;
+  --app-text-dim: #737373;
+  --app-text-inverse: #0d0d0d;
+
+  /* Status */
+  --app-success: #22c55e;
+  --app-success-muted: rgba(34, 197, 94, 0.2);
+  --app-error: #ef4444;
+  --app-error-muted: rgba(239, 68, 68, 0.2);
+  --app-warning: #eab308;
+  --app-warning-muted: rgba(234, 179, 8, 0.2);
+  --app-info: #3b82f6;
+  --app-info-muted: rgba(59, 130, 246, 0.2);
+  --app-auction: #f43f5e;
+  --app-auction-muted: rgba(244, 63, 94, 0.2);
+
+  /* Layout */
+  --app-nav-height: 4rem;
+  --app-nav-height-mobile: 3.5rem;
+  --app-container-max: 80rem;
+  --app-page-padding-x: 1rem;
+  --app-page-padding-x-sm: 1.5rem;
+  --app-page-padding-x-lg: 2rem;
+  --app-page-padding-y: 2rem;
+  --app-page-padding-y-sm: 2.5rem;
+  --app-page-padding-y-lg: 4rem;
+  --app-gap: 0.75rem;
+  --app-gap-sm: 1rem;
+  --app-gap-md: 1.5rem;
+  --app-gap-lg: 2rem;
+
+  /* Radii */
+  --app-radius: 0.5rem;
+  --app-radius-lg: 0.75rem;
+  --app-radius-xl: 1rem;
+  --app-radius-2xl: 1.25rem;
+
+  /* Touch / a11y */
+  --app-touch-min: 44px;
+  --app-touch-min-lg: 48px;
+
+  /* Transitions */
+  --app-transition: 0.2s ease;
+  --app-transition-fast: 0.15s ease;
+
+  /* Skeleton loading */
+  --app-skeleton-base: var(--app-border);
+  --app-skeleton-shine: rgba(255, 255, 255, 0.08);
+  --app-skeleton-duration: 2s;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --app-page-padding-x: var(--app-page-padding-x-sm);
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --app-page-padding-x: var(--app-page-padding-x-lg);
+  }
+}
+
+/* Ensure app background applies to the root (avoids flash of wrong bg) */
+#root {
+  background: var(--app-bg);
+  color: var(--app-text);
+}
