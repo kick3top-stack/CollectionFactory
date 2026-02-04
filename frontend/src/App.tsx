@@ -144,8 +144,10 @@ function App() {
   const fetchNFTs = async () => {
     if (typeof window.ethereum === 'undefined') {
       setNfts([]);
+      setLoading(false);
       return;
     }
+    try {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const factory = getCollectionFactoryContract(provider);
     const marketplace = getMarketplaceContract(provider);
@@ -308,14 +310,13 @@ function App() {
         return { ...c, image };
       })
     );
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchNFTs();
-
-    setTimeout(() => {
-      setLoading(false);
-    }, 3000);
   }, []);
 
   useEffect(() => {
