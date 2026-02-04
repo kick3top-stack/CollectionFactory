@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AppContextType } from '../App';
 import { ArrowUpDown } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type CollectionsPageProps = {
   context: AppContextType;
@@ -108,29 +109,51 @@ export function CollectionsPage({ context, onNavigate }: CollectionsPageProps) {
               </tr>
             </thead>
             <tbody>
-              {displayedCollections.map(collection => (
-                <tr
-                  key={collection.id}
-                  onClick={() => onNavigate('collection-detail', collection.id)}
-                  className="border-b border-gray-800 hover:bg-white/5 cursor-pointer transition-colors"
-                >
-                  <td className="p-4">
-                    <img
-                      src={collection.image}
-                      alt={collection.name}
-                      className="w-16 h-16 rounded-lg object-cover"
-                    />
-                  </td>
-                  <td className="p-4 font-bold">{collection.name}</td>
-                  <td className="p-4 text-gray-400 max-w-xs truncate">
-                    {collection.description}
-                  </td>
-                  <td className="p-4">{collection.nftCount}</td>
-                  <td className="p-4 text-[#00FFFF] font-bold">
-                    {collection.floorPrice > 0 ? `${collection.floorPrice} ETH` : 'N/A'}
-                  </td>
-                </tr>
-              ))}
+              {context.loading ? (
+                Array.from({ length: 10 }).map((_, i) => (
+                  <tr key={i} className="border-b border-gray-800">
+                    <td className="p-4">
+                      <Skeleton className="w-16 h-16 rounded-lg bg-gray-700/50" />
+                    </td>
+                    <td className="p-4">
+                      <Skeleton className="h-5 w-32 bg-gray-700/50" />
+                    </td>
+                    <td className="p-4">
+                      <Skeleton className="h-4 max-w-xs bg-gray-700/50" />
+                    </td>
+                    <td className="p-4">
+                      <Skeleton className="h-5 w-12 bg-gray-700/50" />
+                    </td>
+                    <td className="p-4">
+                      <Skeleton className="h-5 w-20 bg-gray-700/50" />
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                displayedCollections.map(collection => (
+                  <tr
+                    key={collection.id}
+                    onClick={() => onNavigate('collection-detail', collection.id)}
+                    className="border-b border-gray-800 hover:bg-white/5 cursor-pointer transition-colors"
+                  >
+                    <td className="p-4">
+                      <img
+                        src={collection.image}
+                        alt={collection.name}
+                        className="w-16 h-16 rounded-lg object-cover"
+                      />
+                    </td>
+                    <td className="p-4 font-bold">{collection.name}</td>
+                    <td className="p-4 text-gray-400 max-w-xs truncate">
+                      {collection.description}
+                    </td>
+                    <td className="p-4">{collection.nftCount}</td>
+                    <td className="p-4 text-[#00FFFF] font-bold">
+                      {collection.floorPrice > 0 ? `${collection.floorPrice} ETH` : 'N/A'}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -170,42 +193,61 @@ export function CollectionsPage({ context, onNavigate }: CollectionsPageProps) {
             </button>
           </div>
 
-          {displayedCollections.map(collection => (
-            <div
-              key={collection.id}
-              onClick={() => onNavigate('collection-detail', collection.id)}
-              className="bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden hover:border-[#00FFFF] transition-all"
-            >
-              <div className="flex gap-4 p-4">
-                <img
-                  src={collection.image}
-                  alt={collection.name}
-                  className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold mb-1">{collection.name}</h3>
-                  <p className="text-sm text-gray-400 line-clamp-2 mb-2">
-                    {collection.description}
-                  </p>
-                  <div className="flex gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Items: </span>
-                      <span>{collection.nftCount}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Floor: </span>
-                      <span className="text-[#00FFFF] font-bold">
-                        {collection.floorPrice > 0 ? `${collection.floorPrice} ETH` : 'N/A'}
-                      </span>
+          {context.loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden">
+                <div className="flex gap-4 p-4">
+                  <Skeleton className="w-20 h-20 rounded-lg flex-shrink-0 bg-gray-700/50" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <Skeleton className="h-5 w-3/4 bg-gray-700/50" />
+                    <Skeleton className="h-4 w-full bg-gray-700/50" />
+                    <Skeleton className="h-4 w-2/3 bg-gray-700/50" />
+                    <div className="flex gap-4 pt-1">
+                      <Skeleton className="h-4 w-16 bg-gray-700/50" />
+                      <Skeleton className="h-4 w-20 bg-gray-700/50" />
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            displayedCollections.map(collection => (
+              <div
+                key={collection.id}
+                onClick={() => onNavigate('collection-detail', collection.id)}
+                className="bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden hover:border-[#00FFFF] transition-all"
+              >
+                <div className="flex gap-4 p-4">
+                  <img
+                    src={collection.image}
+                    alt={collection.name}
+                    className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold mb-1">{collection.name}</h3>
+                    <p className="text-sm text-gray-400 line-clamp-2 mb-2">
+                      {collection.description}
+                    </p>
+                    <div className="flex gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Items: </span>
+                        <span>{collection.nftCount}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Floor: </span>
+                        <span className="text-[#00FFFF] font-bold">
+                          {collection.floorPrice > 0 ? `${collection.floorPrice} ETH` : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
-        {displayedCollections.length < sortedCollections.length && (
+        {!context.loading && displayedCollections.length < sortedCollections.length && (
           <div className="text-center py-8 text-gray-400">
             Loading more collections...
           </div>

@@ -227,3 +227,17 @@ html {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Skeleton loading: gradual brighten/darken (OpenSea-style) */
+@keyframes skeleton-glow {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+[data-slot="skeleton"] {
+  animation: skeleton-glow 2s ease-in-out infinite;
+}

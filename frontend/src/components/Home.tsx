@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AppContextType } from '../App';
 import { Sparkles, TrendingUp } from 'lucide-react';
 import { NFTCard } from './NFTCard';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type HomeProps = {
   context: AppContextType;
@@ -149,37 +150,54 @@ export function Home({ context, onNavigate }: HomeProps) {
           <h2 className="text-3xl font-bold">Featured Collections</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredCollections.map(collection => (
-            <div
-              key={collection.id}
-              onClick={() => onNavigate('collection-detail', collection.id)}
-              className="group cursor-pointer bg-[#1a1a1a] rounded-xl overflow-hidden border border-gray-800 hover:border-[#00FFFF] transition-all hover:scale-105"
-            >
-              <div className="aspect-square overflow-hidden">
-                <img 
-                  src={collection.image} 
-                  alt={collection.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="text-xl font-bold mb-2">{collection.name}</h3>
-                <p className="text-gray-400 text-sm mb-4 line-clamp-2">{collection.description}</p>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="text-xs text-gray-500">Floor Price</div>
-                    <div className="text-lg font-bold text-[#00FFFF]">
-                      {collection.floorPrice > 0 ? `${collection.floorPrice} ETH` : 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Items</div>
-                    <div className="text-lg font-bold">{collection.nftCount}</div>
+          {context.loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-[#1a1a1a] rounded-xl overflow-hidden border border-gray-800">
+                <Skeleton className="aspect-square w-full rounded-none bg-gray-700/50" />
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-6 w-3/4 bg-gray-700/50" />
+                  <Skeleton className="h-4 w-full bg-gray-700/50" />
+                  <Skeleton className="h-4 w-2/3 bg-gray-700/50" />
+                  <div className="flex justify-between gap-4 pt-2">
+                    <Skeleton className="h-8 w-20 bg-gray-700/50" />
+                    <Skeleton className="h-8 w-16 bg-gray-700/50" />
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            featuredCollections.map(collection => (
+              <div
+                key={collection.id}
+                onClick={() => onNavigate('collection-detail', collection.id)}
+                className="group cursor-pointer bg-[#1a1a1a] rounded-xl overflow-hidden border border-gray-800 hover:border-[#00FFFF] transition-all hover:scale-105"
+              >
+                <div className="aspect-square overflow-hidden">
+                  <img 
+                    src={collection.image} 
+                    alt={collection.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                </div>
+                <div className="p-4">
+                  <h3 className="text-xl font-bold mb-2">{collection.name}</h3>
+                  <p className="text-gray-400 text-sm mb-4 line-clamp-2">{collection.description}</p>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-xs text-gray-500">Floor Price</div>
+                      <div className="text-lg font-bold text-[#00FFFF]">
+                        {collection.floorPrice > 0 ? `${collection.floorPrice} ETH` : 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Items</div>
+                      <div className="text-lg font-bold">{collection.nftCount}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
@@ -187,9 +205,22 @@ export function Home({ context, onNavigate }: HomeProps) {
       <section className="py-16 px-4 max-w-7xl mx-auto">
         <h2 className="text-3xl font-bold mb-8">Top NFTs</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {topNFTs.map(nft => (
-            <NFTCard key={nft.id} nft={nft} context={context} compact />
-          ))}
+          {context.loading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-[#1a1a1a] rounded-xl overflow-hidden border border-gray-800">
+                <Skeleton className="aspect-square w-full rounded-none bg-gray-700/50" />
+                <div className="p-4 space-y-2">
+                  <Skeleton className="h-5 w-2/3 bg-gray-700/50" />
+                  <Skeleton className="h-4 w-full bg-gray-700/50" />
+                  <Skeleton className="h-6 w-24 bg-gray-700/50 mt-2" />
+                </div>
+              </div>
+            ))
+          ) : (
+            topNFTs.map(nft => (
+              <NFTCard key={nft.id} nft={nft} context={context} compact />
+            ))
+          )}
         </div>
       </section>
 

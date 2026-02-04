@@ -6,7 +6,6 @@ import { CollectionDetailPage } from './components/CollectionDetailPage';
 import { AuctionsPage } from './components/AuctionsPage';
 import { ProfilePage } from './components/ProfilePage';
 import { Navigation } from './components/Navigation';
-import { PreloadEffect } from './components/PreloadEffect';
 import { AlertModal } from './components/AlertModal';
 import { ethers } from 'ethers';
 import { getCollectionFactoryContract } from './blockchain/contracts/factoryContract';
@@ -76,6 +75,7 @@ export type AppContextType = {
   nfts: NFT[];
   collections: Collection[];
   transactions: Transaction[];
+  loading: boolean;
   addNFT: (nft: NFT) => void;
   updateNFT: (id: string, updates: Partial<NFT>) => void;
   addCollection: (collection: Collection) => void;
@@ -396,16 +396,13 @@ function App() {
     nfts,
     collections,
     transactions,
+    loading,
     addNFT,
     updateNFT,
     addCollection,
     addTransaction,
     showAlert,
   };
-
-  if (loading) {
-    return <PreloadEffect />;
-  }
 
   return (
     <div className="min-h-screen bg-[#121212] text-white">

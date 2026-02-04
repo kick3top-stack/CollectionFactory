@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AppContextType } from '../App';
 import { NFTCard } from './NFTCard';
-import { Wallet, LogOut, Package, History, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Wallet, LogOut, Package, History, ChevronLeft, ChevronRight, X, Coins } from 'lucide-react';
 import { ethers } from 'ethers';
 import { getMarketplaceContract } from '@/blockchain/contracts/marketplaceContract';
 import { getCollectionFactoryContract } from '@/blockchain/contracts/factoryContract';
@@ -27,6 +27,7 @@ export function ProfilePage({ context }: ProfilePageProps) {
   const [platformFeesAmount, setPlatformFeesAmount] = useState<number>(0);
   const [factoryBalance, setFactoryBalance] = useState<number>(0);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showWithdrawOptionsModal, setShowWithdrawOptionsModal] = useState(false);
   const [withdrawableAmount, setWithdrawableAmount] = useState<number>(0);
   const [withdrawType, setWithdrawType] = useState<WithdrawType>('balance');
 
@@ -101,7 +102,8 @@ export function ProfilePage({ context }: ProfilePageProps) {
   const formatWithdrawAmount = (amount: number) =>
     parseFloat(amount.toFixed(4)).toString();
 
-  const handleWithdrawBalanceClick = async () => {
+  const handleWithdrawBalanceClick = () => {
+    setShowWithdrawOptionsModal(false);
     if (!context.wallet) {
       context.showAlert('Please connect your wallet first', 'error');
       return;
@@ -115,7 +117,8 @@ export function ProfilePage({ context }: ProfilePageProps) {
     setShowWithdrawModal(true);
   };
 
-  const handleWithdrawPlatformFeesClick = async () => {
+  const handleWithdrawPlatformFeesClick = () => {
+    setShowWithdrawOptionsModal(false);
     if (!context.wallet) {
       context.showAlert('Please connect your wallet first', 'error');
       return;
@@ -129,7 +132,8 @@ export function ProfilePage({ context }: ProfilePageProps) {
     setShowWithdrawModal(true);
   };
 
-  const handleWithdrawFactoryFeesClick = async () => {
+  const handleWithdrawFactoryFeesClick = () => {
+    setShowWithdrawOptionsModal(false);
     if (!context.wallet) {
       context.showAlert('Please connect your wallet first', 'error');
       return;
@@ -261,33 +265,13 @@ export function ProfilePage({ context }: ProfilePageProps) {
                 Disconnect Wallet
               </button>
               <button
-                onClick={handleWithdrawBalanceClick}
+                onClick={() => setShowWithdrawOptionsModal(true)}
                 disabled={isProcessing || showWithdrawModal}
-                className="flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg font-medium bg-[#00FFFF] text-black hover:bg-[#00DDDD] transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:flex-row sm:gap-2"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-[#00FFFF] text-black hover:bg-[#00DDDD] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
-                <span>Withdraw</span>
-                <span className="font-bold tabular-nums"> ({formatWithdrawAmount(pendingBalance)} ETH)</span>
+                <Coins className="w-4 h-4 shrink-0" />
+                Withdraw
               </button>
-              {isMarketplaceOwner && (
-                <button
-                  onClick={handleWithdrawPlatformFeesClick}
-                  disabled={isProcessing || showWithdrawModal}
-                  className="flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:flex-row sm:gap-2"
-                >
-                  <span>Withdraw platform fees</span>
-                  <span className="font-bold tabular-nums"> {formatWithdrawAmount(platformFeesAmount)} ETH</span>
-                </button>
-              )}
-              {isFactoryOwner && (
-                <button
-                  onClick={handleWithdrawFactoryFeesClick}
-                  disabled={isProcessing || showWithdrawModal}
-                  className="flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:flex-row sm:gap-2"
-                >
-                  <span>Withdraw factory fees</span>
-                  <span className="font-bold tabular-nums">{formatWithdrawAmount(factoryBalance)} (ETH)</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -485,6 +469,65 @@ export function ProfilePage({ context }: ProfilePageProps) {
           </div>
         )}
       </div>
+
+      {/* Withdraw options modal */}
+      {showWithdrawOptionsModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1a1a1a] rounded-2xl max-w-md w-full border border-gray-800 shadow-2xl">
+            <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#00FFFF]/20 rounded-full flex items-center justify-center">
+                  <Coins className="w-5 h-5 text-[#00FFFF]" />
+                </div>
+                <h2 className="text-xl font-bold">Withdraw</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWithdrawOptionsModal(false)}
+                disabled={isProcessing}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <button
+                type="button"
+                onClick={handleWithdrawBalanceClick}
+                disabled={isProcessing}
+                className="w-full inline-flex items-center justify-between gap-2 px-4 py-3 rounded-xl font-medium bg-[#00FFFF] text-black hover:bg-[#00DDDD] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span>Withdraw balance</span>
+                <span className="font-bold tabular-nums">{formatWithdrawAmount(pendingBalance)} (ETH)</span>
+              </button>
+              {isMarketplaceOwner && (
+                <button
+                  type="button"
+                  onClick={handleWithdrawPlatformFeesClick}
+                  disabled={isProcessing}
+                  style={{ backgroundColor: '#f59e0b', color: '#000' }}
+                  className="w-full inline-flex items-center justify-between gap-2 px-4 py-3 rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>Withdraw platform fees</span>
+                  <span className="font-bold tabular-nums">{formatWithdrawAmount(platformFeesAmount)} (ETH)</span>
+                </button>
+              )}
+              {isFactoryOwner && (
+                <button
+                  type="button"
+                  onClick={handleWithdrawFactoryFeesClick}
+                  disabled={isProcessing}
+                  style={{ backgroundColor: '#10b981', color: '#fff' }}
+                  className="w-full inline-flex items-center justify-between gap-2 px-4 py-3 rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>Withdraw factory fees</span>
+                  <span className="font-bold tabular-nums">{formatWithdrawAmount(factoryBalance)} (ETH)</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Withdraw Confirmation Modal */}
       {showWithdrawModal && (
