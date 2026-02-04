@@ -27,6 +27,7 @@ export function WithdrawConfirmationModal({
         : 'You are about to withdraw your pending balance (sale proceeds or bid refunds) from the marketplace to your wallet.';
   const amountLabel = isFactoryFees ? 'Factory fees to withdraw' : isPlatformFees ? 'Platform fees to withdraw' : 'Withdrawal amount';
   const subLabel = isFactoryFees ? 'Creation fees will be sent to your connected wallet' : isPlatformFees ? 'Fees will be sent to your connected wallet' : 'Funds will be sent to your connected wallet';
+  const formatAmount = (n: number) => parseFloat(n.toFixed(4)).toString();
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
@@ -62,7 +63,7 @@ export function WithdrawConfirmationModal({
               {amountLabel}
             </div>
             <div className="text-3xl font-bold text-[#00FFFF]">
-              {amount.toFixed(6)} ETH
+              {formatAmount(amount)} ETH
             </div>
             <div className="text-xs text-gray-500 mt-2">
               {subLabel}

@@ -102,10 +102,44 @@ function App() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
+  const TX_STORAGE_KEY = 'nft_tx_';
+
   // On refresh or new load, always start disconnected (no auto-reconnect)
   useEffect(() => {
     setWallet(null);
   }, []);
+
+  // Load transactions from localStorage when wallet connects
+  useEffect(() => {
+    if (!wallet) {
+      setTransactions([]);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(TX_STORAGE_KEY + wallet.toLowerCase());
+      if (raw) {
+        const parsed = JSON.parse(raw) as (Transaction & { date: string })[];
+        setTransactions(
+          Array.isArray(parsed)
+            ? parsed.map((t) => ({ ...t, date: new Date(t.date) }))
+            : []
+        );
+      }
+    } catch {
+      setTransactions([]);
+    }
+  }, [wallet]);
+
+  // Persist transactions to localStorage when they or wallet change
+  useEffect(() => {
+    if (wallet && transactions.length > 0) {
+      try {
+        localStorage.setItem(TX_STORAGE_KEY + wallet.toLowerCase(), JSON.stringify(transactions));
+      } catch {
+        // ignore
+      }
+    }
+  }, [wallet, transactions]);
 
   const fetchNFTs = async () => {
     if (typeof window.ethereum === 'undefined') {
