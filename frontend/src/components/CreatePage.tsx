@@ -3,6 +3,7 @@ import { Upload, X } from 'lucide-react';
 import { AppContextType } from '../App';
 import { CollectionSelectModal } from './CollectionSelectModal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/components/ui/utils';
 import { uploadToIPFS, uploadJSONToIPFS } from '@/blockchain/utils/ipfs';
 import { getNFTContract } from '@/blockchain/contracts/nftContract';
 import { getCollectionFactoryContract } from '@/blockchain/contracts/factoryContract';
@@ -244,29 +245,39 @@ export function CreatePage({ context }: CreatePageProps) {
   const selectedCollectionData = context.collections.find((c) => c.id === selectedCollection);
 
   return (
-    <div className="min-h-screen py-16 px-4">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-2">Create</h1>
-        <p className="text-gray-400 mb-6">Create a new collection or mint an NFT to an existing collection.</p>
+    <div className="min-h-screen py-8 sm:py-12 px-4 sm:px-6 flex flex-col items-center">
+      <div className="w-full max-w-2xl min-w-0">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-2 w-full text-center sm:text-left">Create</h1>
+        <p className="text-gray-400 mb-6 sm:mb-8 text-sm sm:text-base w-full text-center sm:text-left">Create a new collection or mint an NFT to an existing collection.</p>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full max-w-md grid grid-cols-2 bg-[#1a1a1a] border border-gray-700 p-1 rounded-lg mb-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-2xl">
+          <TabsList className="w-full grid grid-cols-2 bg-[#1a1a1a] border border-gray-700 p-1 rounded-xl mb-6 sm:mb-8 h-12 sm:h-11">
             <TabsTrigger
               value="collection"
-              className="data-[state=active]:bg-[#00FFFF] data-[state=active]:text-black"
+              className={cn(
+                'cursor-pointer rounded-lg py-2 transition-colors duration-200',
+                activeTab === 'collection'
+                  ? 'bg-[#00FFFF] text-black shadow-md ring-2 ring-[#00FFFF]/50 ring-offset-2 ring-offset-[#1a1a1a] hover:bg-[#00DDDD]'
+                  : 'text-gray-400 hover:bg-white/10 hover:text-white'
+              )}
             >
               Collection
             </TabsTrigger>
             <TabsTrigger
               value="mint"
-              className="data-[state=active]:bg-[#00FFFF] data-[state=active]:text-black"
+              className={cn(
+                'cursor-pointer rounded-lg py-2 transition-colors duration-200',
+                activeTab === 'mint'
+                  ? 'bg-[#00FFFF] text-black shadow-md ring-2 ring-[#00FFFF]/50 ring-offset-2 ring-offset-[#1a1a1a] hover:bg-[#00DDDD]'
+                  : 'text-gray-400 hover:bg-white/10 hover:text-white'
+              )}
             >
               Mint NFT
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="collection" className="mt-0">
-            <div className="max-w-xl space-y-6">
+          <TabsContent value="collection" className="mt-0 outline-none">
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium mb-2">Collection Name *</label>
                 <input
@@ -274,13 +285,16 @@ export function CreatePage({ context }: CreatePageProps) {
                   value={collectionName}
                   onChange={(e) => setCollectionName(e.target.value)}
                   placeholder="e.g. My Art Collection"
-                  className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg focus:outline-none focus:border-[#00FFFF]"
+                  className="w-full min-w-0 px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg focus:outline-none focus:border-[#00FFFF] focus:ring-2 focus:ring-[#00FFFF]/20 transition-colors hover:border-gray-600"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Cover Image (optional)</label>
                 {!collectionImagePreview ? (
-                  <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center hover:border-[#00FFFF] transition-colors">
+                  <label
+                    htmlFor="collection-image-upload"
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-xl p-6 sm:p-8 text-center cursor-pointer transition-colors duration-200 hover:border-[#00FFFF] hover:bg-[#1a1a1a]/80 group"
+                  >
                     <input
                       type="file"
                       accept="image/jpeg,image/png"
@@ -288,29 +302,27 @@ export function CreatePage({ context }: CreatePageProps) {
                       className="hidden"
                       id="collection-image-upload"
                     />
-                    <label htmlFor="collection-image-upload" className="cursor-pointer">
-                      <Upload className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-                      <p className="text-gray-400 text-sm">Click to upload</p>
-                      <p className="text-xs text-gray-500 mt-1">JPEG or PNG (max 5MB)</p>
-                    </label>
-                  </div>
+                    <Upload className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-400 group-hover:text-[#00FFFF] transition-colors" />
+                    <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">Click to upload</p>
+                    <p className="text-xs text-gray-500 mt-1">JPEG or PNG (max 5MB)</p>
+                  </label>
                 ) : (
                   <div className="relative inline-block">
-                    <img src={collectionImagePreview} alt="Preview" className="w-40 h-40 object-cover rounded-xl" />
+                    <img src={collectionImagePreview} alt="Preview" className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded-xl" />
                     <button
                       type="button"
                       onClick={() => {
                         setCollectionImageFile(null);
                         setCollectionImagePreview('');
                       }}
-                      className="absolute top-2 right-2 p-2 bg-red-500 rounded-lg hover:bg-red-600"
+                      className="absolute top-2 right-2 p-2 bg-red-500 rounded-lg hover:bg-red-600 active:scale-95 transition-transform cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 )}
               </div>
-              <div className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-700">
+              <div className="bg-[#1a1a1a] p-4 rounded-xl border border-gray-700">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-400">Creation Fee</span>
                   <span className="font-bold text-[#00FFFF]">{creationFee} ETH</span>
@@ -319,8 +331,8 @@ export function CreatePage({ context }: CreatePageProps) {
               <button
                 onClick={handleCreateCollection}
                 disabled={isCreatingCollection}
-                className={`w-full px-6 py-4 rounded-lg font-medium transition-all ${
-                  isCreatingCollection ? 'bg-gray-600 cursor-not-allowed' : 'bg-[#00FFFF] text-black hover:bg-[#00DDDD]'
+                className={`w-full min-h-[48px] px-6 py-4 rounded-xl font-medium transition-all duration-200 cursor-pointer disabled:cursor-not-allowed ${
+                  isCreatingCollection ? 'bg-gray-600' : 'bg-[#00FFFF] text-black hover:bg-[#00DDDD] hover:shadow-lg hover:shadow-[#00FFFF]/20 active:scale-[0.99]'
                 }`}
               >
                 {isCreatingCollection ? (
@@ -335,12 +347,15 @@ export function CreatePage({ context }: CreatePageProps) {
             </div>
           </TabsContent>
 
-          <TabsContent value="mint" className="mt-0">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
+          <TabsContent value="mint" className="mt-0 outline-none">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+              <div className="min-w-0">
                 <label className="block text-sm font-medium mb-2">Upload Image *</label>
                 {!imagePreview ? (
-                  <div className="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center hover:border-[#00FFFF] transition-colors">
+                  <label
+                    htmlFor="mint-image-upload"
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-xl p-6 sm:p-8 min-h-[200px] sm:min-h-[240px] text-center cursor-pointer transition-colors duration-200 hover:border-[#00FFFF] hover:bg-[#1a1a1a]/80 group"
+                  >
                     <input
                       type="file"
                       accept="image/jpeg,image/png"
@@ -348,14 +363,12 @@ export function CreatePage({ context }: CreatePageProps) {
                       className="hidden"
                       id="mint-image-upload"
                     />
-                    <label htmlFor="mint-image-upload" className="cursor-pointer">
-                      <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                      <p className="text-gray-400 mb-2">Click to upload image</p>
-                      <p className="text-sm text-gray-500">JPEG or PNG (max 5MB)</p>
-                    </label>
-                  </div>
+                    <Upload className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-gray-400 group-hover:text-[#00FFFF] transition-colors" />
+                    <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">Click to upload image</p>
+                    <p className="text-xs text-gray-500 mt-1">JPEG or PNG (max 5MB)</p>
+                  </label>
                 ) : (
-                  <div className="relative">
+                  <div className="relative w-full aspect-square max-w-sm mx-auto md:max-w-none">
                     <img src={imagePreview} alt="Preview" className="w-full aspect-square object-cover rounded-xl" />
                     <button
                       type="button"
@@ -363,14 +376,14 @@ export function CreatePage({ context }: CreatePageProps) {
                         setImageFile(null);
                         setImagePreview('');
                       }}
-                      className="absolute top-3 right-3 p-2 bg-red-500 rounded-lg hover:bg-red-600"
+                      className="absolute top-2 right-2 sm:top-3 sm:right-3 p-2 bg-red-500 rounded-lg hover:bg-red-600 active:scale-95 transition-transform cursor-pointer"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   </div>
                 )}
               </div>
-              <div className="space-y-6">
+              <div className="space-y-6 min-w-0">
                 <div>
                   <label className="block text-sm font-medium mb-2">NFT Name *</label>
                   <input
@@ -378,7 +391,7 @@ export function CreatePage({ context }: CreatePageProps) {
                     value={nftName}
                     onChange={(e) => setNftName(e.target.value)}
                     placeholder="Enter NFT name"
-                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg focus:outline-none focus:border-[#00FFFF]"
+                    className="w-full min-w-0 px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg focus:outline-none focus:border-[#00FFFF] focus:ring-2 focus:ring-[#00FFFF]/20 transition-colors hover:border-gray-600"
                   />
                 </div>
                 <div>
@@ -388,10 +401,10 @@ export function CreatePage({ context }: CreatePageProps) {
                     onChange={(e) => setNftDescription(e.target.value)}
                     placeholder="Enter NFT description"
                     rows={4}
-                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg focus:outline-none focus:border-[#00FFFF] resize-none"
+                    className="w-full min-w-0 px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg focus:outline-none focus:border-[#00FFFF] focus:ring-2 focus:ring-[#00FFFF]/20 resize-none transition-colors hover:border-gray-600"
                   />
                 </div>
-                <div className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-700">
+                <div className="bg-[#1a1a1a] p-4 rounded-xl border border-gray-700">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-400">Mint Fee</span>
                     <span className="font-bold text-[#00FFFF]">{mintFee} ETH</span>
@@ -400,20 +413,20 @@ export function CreatePage({ context }: CreatePageProps) {
                 <div>
                   <label className="block text-sm font-medium mb-3">Collection *</label>
                   {selectedCollectionData ? (
-                    <div className="flex items-center gap-3 p-3 bg-[#1a1a1a] border border-gray-700 rounded-lg">
+                    <div className="flex items-center gap-3 p-3 bg-[#1a1a1a] border border-gray-700 rounded-xl min-w-0">
                       <img
                         src={selectedCollectionData.image}
                         alt={selectedCollectionData.name}
-                        className="w-12 h-12 rounded-lg object-cover"
+                        className="w-12 h-12 rounded-lg object-cover shrink-0"
                       />
-                      <div className="flex-1">
-                        <div className="font-medium">{selectedCollectionData.name}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{selectedCollectionData.name}</div>
                         <div className="text-sm text-gray-400">{selectedCollectionData.nftCount} items</div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setSelectedCollection('')}
-                        className="p-2 hover:bg-white/10 rounded-lg"
+                        className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer shrink-0"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -422,7 +435,7 @@ export function CreatePage({ context }: CreatePageProps) {
                     <button
                       type="button"
                       onClick={() => setShowCollectionModal(true)}
-                      className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg hover:border-[#00FFFF] transition-colors text-left text-gray-400"
+                      className="w-full min-h-[48px] px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-xl text-left text-gray-400 transition-colors duration-200 hover:border-[#00FFFF] hover:bg-[#252525] hover:text-gray-300 cursor-pointer"
                     >
                       Select a collection...
                     </button>
@@ -431,8 +444,8 @@ export function CreatePage({ context }: CreatePageProps) {
                 <button
                   onClick={handleMint}
                   disabled={isMinting}
-                  className={`w-full px-6 py-4 rounded-lg font-medium transition-all ${
-                    isMinting ? 'bg-gray-600 cursor-not-allowed' : 'bg-[#00FFFF] text-black hover:bg-[#00DDDD]'
+                  className={`w-full min-h-[48px] px-6 py-4 rounded-xl font-medium transition-all duration-200 cursor-pointer disabled:cursor-not-allowed ${
+                    isMinting ? 'bg-gray-600' : 'bg-[#00FFFF] text-black hover:bg-[#00DDDD] hover:shadow-lg hover:shadow-[#00FFFF]/20 active:scale-[0.99]'
                   }`}
                 >
                   {isMinting ? (
