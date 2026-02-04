@@ -228,16 +228,12 @@ html {
   overflow: hidden;
 }
 
-/* Skeleton loading: gradual brighten/darken (OpenSea-style) */
+/* Skeleton: gradual brighten/darken (keyframes; animation applied via inline style in Skeleton.tsx) */
 @keyframes skeleton-glow {
   0%, 100% {
-    opacity: 0.4;
+    opacity: 0.35;
   }
   50% {
-    opacity: 0.85;
+    opacity: 0.9;
   }
-}
-
-[data-slot="skeleton"] {
-  animation: skeleton-glow 2s ease-in-out infinite;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Wallet } from 'lucide-react';
 import { AppContextType } from '../App';
 import { CollectionSelectModal } from './CollectionSelectModal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -108,8 +108,15 @@ export function CreatePage({ context }: CreatePageProps) {
         imageURL = (await uploadToIPFS(collectionImageFile)) ?? '';
       }
 
+      const collectionMetadata = {
+        name: collectionName.trim(),
+        description: `${collectionName.trim()} collection`,
+        image: imageURL || '',
+      };
+      const collectionMetadataURI = (await uploadJSONToIPFS(collectionMetadata)) ?? '';
+
       const symbol = collectionName.trim().replace(/\s+/g, '').slice(0, 10) || 'COL';
-      const tx = await factory.createCollection(collectionName.trim(), symbol, '', { value: feeWei });
+      const tx = await factory.createCollection(collectionName.trim(), symbol, collectionMetadataURI, { value: feeWei });
       const receipt = await tx.wait();
       const factoryAddress = await factory.getAddress();
       let collectionAddress: string | undefined;
@@ -243,6 +250,26 @@ export function CreatePage({ context }: CreatePageProps) {
   };
 
   const selectedCollectionData = context.collections.find((c) => c.id === selectedCollection);
+
+  if (!context.wallet) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <Wallet className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+          <h2 className="text-2xl font-bold mb-2">Connect Your Wallet</h2>
+          <p className="text-gray-400 mb-6">
+            Please connect your wallet to create collections and mint NFTs
+          </p>
+          <button
+            onClick={context.connectWallet}
+            className="px-8 py-3 bg-[#00FFFF] text-black rounded-lg hover:bg-[#00DDDD] transition-colors font-medium"
+          >
+            Connect Wallet
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen py-8 sm:py-12 px-4 sm:px-6 flex flex-col items-center">

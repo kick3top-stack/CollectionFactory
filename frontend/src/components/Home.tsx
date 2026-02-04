@@ -155,12 +155,12 @@ export function Home({ context, onNavigate }: HomeProps) {
               <div key={i} className="bg-[#1a1a1a] rounded-xl overflow-hidden border border-gray-800">
                 <Skeleton className="aspect-square w-full rounded-none bg-gray-700/50" />
                 <div className="p-4 space-y-3">
-                  <Skeleton className="h-6 w-3/4 bg-gray-700/50" />
-                  <Skeleton className="h-4 w-full bg-gray-700/50" />
-                  <Skeleton className="h-4 w-2/3 bg-gray-700/50" />
+                  <Skeleton className="h-6 w-3/4 max-w-[180px] rounded-lg bg-gray-700/50" />
+                  <Skeleton className="h-4 w-full max-w-[240px] rounded-lg bg-gray-700/50" />
+                  <Skeleton className="h-4 w-2/3 max-w-[180px] rounded-lg bg-gray-700/50" />
                   <div className="flex justify-between gap-4 pt-2">
-                    <Skeleton className="h-8 w-20 bg-gray-700/50" />
-                    <Skeleton className="h-8 w-16 bg-gray-700/50" />
+                    <Skeleton className="h-6 w-20 rounded-lg bg-gray-700/50" />
+                    <Skeleton className="h-6 w-14 rounded-lg bg-gray-700/50" />
                   </div>
                 </div>
               </div>
@@ -210,9 +210,11 @@ export function Home({ context, onNavigate }: HomeProps) {
               <div key={i} className="bg-[#1a1a1a] rounded-xl overflow-hidden border border-gray-800">
                 <Skeleton className="aspect-square w-full rounded-none bg-gray-700/50" />
                 <div className="p-4 space-y-2">
-                  <Skeleton className="h-5 w-2/3 bg-gray-700/50" />
-                  <Skeleton className="h-4 w-full bg-gray-700/50" />
-                  <Skeleton className="h-6 w-24 bg-gray-700/50 mt-2" />
+                  <Skeleton className="h-5 w-2/3 max-w-[140px] rounded-lg bg-gray-700/50" />
+                  <Skeleton className="h-4 w-full max-w-[180px] rounded-lg bg-gray-700/50" />
+                  <div className="pt-1">
+                    <Skeleton className="h-5 w-24 rounded-lg bg-gray-700/50" />
+                  </div>
                 </div>
               </div>
             ))

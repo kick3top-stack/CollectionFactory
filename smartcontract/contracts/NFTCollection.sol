@@ -13,6 +13,8 @@ interface IFactory {
 contract NFTCollection is ERC721URIStorage, ERC2981, Ownable {
     uint256 private _nextTokenId = 1;
     address public immutable factory;
+    /// @dev Collection-level metadata URI (e.g. IPFS JSON with name, description, image)
+    string public collectionMetadataURI;
 
     constructor(
         string memory name_,
@@ -22,6 +24,7 @@ contract NFTCollection is ERC721URIStorage, ERC2981, Ownable {
         address factory_
     ) ERC721(name_, symbol_) Ownable(creator_) {
         factory = factory_;
+        collectionMetadataURI = baseURI_;
         // Sets a default royalty of 5% to the creator
         _setDefaultRoyalty(creator_, 500); 
     }

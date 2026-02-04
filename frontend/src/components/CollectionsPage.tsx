@@ -110,22 +110,22 @@ export function CollectionsPage({ context, onNavigate }: CollectionsPageProps) {
             </thead>
             <tbody>
               {context.loading ? (
-                Array.from({ length: 10 }).map((_, i) => (
+                Array.from({ length: 9 }).map((_, i) => (
                   <tr key={i} className="border-b border-gray-800">
                     <td className="p-4">
-                      <Skeleton className="w-16 h-16 rounded-lg bg-gray-700/50" />
+                      <Skeleton className="w-16 h-16 rounded-lg flex-shrink-0 bg-gray-700/50" />
                     </td>
                     <td className="p-4">
-                      <Skeleton className="h-5 w-32 bg-gray-700/50" />
+                      <Skeleton className="h-4 w-40 rounded-lg bg-gray-700/50" />
                     </td>
                     <td className="p-4">
-                      <Skeleton className="h-4 max-w-xs bg-gray-700/50" />
+                      <Skeleton className="h-4 max-w-xs w-full rounded-lg bg-gray-700/50" />
                     </td>
                     <td className="p-4">
-                      <Skeleton className="h-5 w-12 bg-gray-700/50" />
+                      <Skeleton className="h-4 w-12 rounded-lg bg-gray-700/50" />
                     </td>
                     <td className="p-4">
-                      <Skeleton className="h-5 w-20 bg-gray-700/50" />
+                      <Skeleton className="h-4 w-20 rounded-lg bg-gray-700/50" />
                     </td>
                   </tr>
                 ))
@@ -194,17 +194,17 @@ export function CollectionsPage({ context, onNavigate }: CollectionsPageProps) {
           </div>
 
           {context.loading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden">
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden hover:border-gray-700 transition-all">
                 <div className="flex gap-4 p-4">
                   <Skeleton className="w-20 h-20 rounded-lg flex-shrink-0 bg-gray-700/50" />
                   <div className="flex-1 min-w-0 space-y-2">
-                    <Skeleton className="h-5 w-3/4 bg-gray-700/50" />
-                    <Skeleton className="h-4 w-full bg-gray-700/50" />
-                    <Skeleton className="h-4 w-2/3 bg-gray-700/50" />
+                    <Skeleton className="h-5 w-3/4 max-w-[160px] rounded-lg bg-gray-700/50" />
+                    <Skeleton className="h-3 w-full max-w-[200px] rounded-lg bg-gray-700/50" />
+                    <Skeleton className="h-3 w-2/3 max-w-[140px] rounded-lg bg-gray-700/50" />
                     <div className="flex gap-4 pt-1">
-                      <Skeleton className="h-4 w-16 bg-gray-700/50" />
-                      <Skeleton className="h-4 w-20 bg-gray-700/50" />
+                      <Skeleton className="h-4 w-16 rounded-lg bg-gray-700/50" />
+                      <Skeleton className="h-4 w-20 rounded-lg bg-gray-700/50" />
                     </div>
                   </div>
                 </div>

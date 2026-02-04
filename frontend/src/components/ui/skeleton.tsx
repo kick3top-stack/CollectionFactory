@@ -1,12 +1,17 @@
 import { cn } from "./utils";
 
-function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+function Skeleton({ className, ...rest }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="skeleton"
-      className={cn("bg-accent rounded-md", className)}
-      {...props}
-    />
+      className="block w-full"
+      style={{ animation: "skeleton-glow 2.2s ease-in-out infinite" }}
+    >
+      <div
+        className={cn("bg-accent rounded-md w-full", className)}
+        {...rest}
+      />
+    </div>
   );
 }
 

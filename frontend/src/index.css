@@ -2191,3 +2191,13 @@ html {
     transform: none;
   }
 }
+
+/* Skeleton loading: gradual brighten/darken (OpenSea-style) */
+@keyframes skeleton-glow {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}

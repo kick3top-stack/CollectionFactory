@@ -265,7 +265,7 @@ function App() {
     setNfts(fetchedNFTs);
 
     // 4. Build collections from collectionsList + fetchedNFTs (floorPrice, nftCount)
-    const collectionMap = new Map<string, Collection>();
+    const collectionMap = new Map<string, Omit<Collection, 'image'> & { image?: string }>();
     for (const col of collectionsList) {
       const addr = ethers.getAddress(col.address);
       const colNfts = fetchedNFTs.filter((n) => n.collectionAddress.toLowerCase() === addr.toLowerCase());
@@ -273,18 +273,41 @@ function App() {
       const floorPrice = available.length
         ? Math.min(...available.map((n) => n.price ?? Infinity).filter((p) => p !== Infinity))
         : 0;
+      let collectionImage = colNfts[0]?.image ?? '';
+      let collectionName = col.name || `Collection ${addr.slice(0, 10)}...`;
+      let collectionDescription = `Collection of ${col.name || 'NFTs'}`;
+      try {
+        const nftContract = new ethers.Contract(addr, nftAbi.abi, provider);
+        const metadataURI = await nftContract.collectionMetadataURI();
+        if (metadataURI && String(metadataURI).trim()) {
+          const url = resolveTokenUri(String(metadataURI));
+          const meta = await fetch(url).then((r) => r.json()).catch(() => null);
+          if (meta?.image) collectionImage = meta.image;
+          if (meta?.name) collectionName = meta.name;
+          if (meta?.description) collectionDescription = meta.description;
+        }
+      } catch {
+        // use defaults from event / first NFT
+      }
       collectionMap.set(addr, {
         id: addr,
         contractAddress: addr,
-        name: col.name || `Collection ${addr.slice(0, 10)}...`,
-        description: `Collection of ${col.name || 'NFTs'}`,
-        image: colNfts[0]?.image ?? '',
+        name: collectionName,
+        description: collectionDescription,
+        image: collectionImage,
         creator: col.creator,
         floorPrice: Number.isFinite(floorPrice) ? floorPrice : 0,
         nftCount: available.length,
       });
     }
-    setCollections(Array.from(collectionMap.values()));
+    const newList = Array.from(collectionMap.values());
+    setCollections((prev) =>
+      newList.map((c) => {
+        const existing = prev.find((p) => p.id === c.id);
+        const image = (existing?.image && existing.image.trim() !== '') ? existing.image : (c.image || '');
+        return { ...c, image };
+      })
+    );
   };
 
   useEffect(() => {
@@ -304,11 +327,12 @@ function App() {
         const floorPrice = available.length
           ? Math.min(...available.map((n) => n.price ?? Infinity).filter((p) => p !== Infinity))
           : 0;
+        const collectionImage = (c.image && c.image.trim() !== '') ? c.image : (colNfts[0]?.image ?? '');
         return {
           ...c,
           floorPrice: Number.isFinite(floorPrice) ? floorPrice : 0,
           nftCount: available.length,
-          image: colNfts[0]?.image ?? c.image,
+          image: collectionImage,
         };
       })
     );

@@ -298,7 +298,7 @@ export function ProfilePage({ context }: ProfilePageProps) {
             }`}
           >
             <History className="w-4 h-4" />
-            Transaction History ({onChainTxs.length})
+            Transaction History
           </button>
         </div>
 
@@ -357,8 +357,8 @@ export function ProfilePage({ context }: ProfilePageProps) {
           <div>
             {loadingTxs ? (
               <div className="flex items-center justify-center py-16 bg-[#1a1a1a] rounded-xl border border-gray-800">
-                <div className="w-8 h-8 border-2 border-[#00FFFF] border-t-transparent rounded-full animate-spin" />
-                <span className="ml-3 text-gray-400">Loading from chain...</span>
+                <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin " />
+                <span className="ml-3 text-gray-400"><p>  Loading from chain...</p></span>
               </div>
             ) : onChainTxs.length > 0 ? (
               <>
