@@ -90,7 +90,7 @@ export function Home({ context, onNavigate }: HomeProps) {
               Browse Collections
             </button>
             <button 
-              onClick={() => onNavigate('mint')}
+              onClick={() => onNavigate('create')}
               className="px-8 py-4 bg-white/10 text-white border border-white/20 rounded-lg hover:bg-white/20 transition-all hover:scale-105 font-medium"
             >
               Start Minting

@@ -14,9 +14,9 @@ export function Navigation({ currentPage, onNavigate, context }: NavigationProps
   const navItems = [
     { id: 'home', label: 'Home' },
     { id: 'collections', label: 'Collections' },
+    { id: 'create', label: 'Create' },
     { id: 'auctions', label: 'Auctions' },
     { id: 'profile', label: 'My NFTs' },
-    { id: 'mint', label: 'Mint' },
   ];
 
   const handleNavigate = (page: string) => {

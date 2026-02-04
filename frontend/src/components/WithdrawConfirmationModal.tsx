@@ -1,7 +1,10 @@
 import { X, Coins } from 'lucide-react';
 
+export type WithdrawType = 'balance' | 'platformFees' | 'factoryFees';
+
 type WithdrawConfirmationModalProps = {
   amount: number;
+  withdrawType: WithdrawType;
   onConfirm: () => void;
   onCancel: () => void;
   isProcessing?: boolean;
@@ -9,10 +12,22 @@ type WithdrawConfirmationModalProps = {
 
 export function WithdrawConfirmationModal({
   amount,
+  withdrawType,
   onConfirm,
   onCancel,
   isProcessing = false,
 }: WithdrawConfirmationModalProps) {
+  const isPlatformFees = withdrawType === 'platformFees';
+  const isFactoryFees = withdrawType === 'factoryFees';
+  const description =
+    isFactoryFees
+      ? 'You are about to withdraw creation fees from the CollectionFactory contract to your wallet. This action cannot be undone.'
+      : isPlatformFees
+        ? 'You are about to withdraw platform fees from the marketplace to your wallet. This action cannot be undone.'
+        : 'You are about to withdraw your pending balance (sale proceeds or bid refunds) from the marketplace to your wallet.';
+  const amountLabel = isFactoryFees ? 'Factory fees to withdraw' : isPlatformFees ? 'Platform fees to withdraw' : 'Withdrawal amount';
+  const subLabel = isFactoryFees ? 'Creation fees will be sent to your connected wallet' : isPlatformFees ? 'Fees will be sent to your connected wallet' : 'Funds will be sent to your connected wallet';
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-[#1a1a1a] rounded-2xl max-w-md w-full border border-gray-800 shadow-2xl">
@@ -38,17 +53,19 @@ export function WithdrawConfirmationModal({
         {/* Content */}
         <div className="p-6">
           <p className="text-gray-300 mb-6">
-            You are about to withdraw funds from the NFT contract. This action cannot be undone.
+            {description}
           </p>
 
           {/* Amount Display */}
           <div className="bg-[#121212] rounded-xl p-6 mb-6 border border-gray-800">
-            <div className="text-sm text-gray-400 mb-2">Withdrawal Amount</div>
+            <div className="text-sm text-gray-400 mb-2">
+              {amountLabel}
+            </div>
             <div className="text-3xl font-bold text-[#00FFFF]">
-              {amount.toFixed(4)} ETH
+              {amount.toFixed(6)} ETH
             </div>
             <div className="text-xs text-gray-500 mt-2">
-              This will be sent to the contract owner address
+              {subLabel}
             </div>
           </div>
 

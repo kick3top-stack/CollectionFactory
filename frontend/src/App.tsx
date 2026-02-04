@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Home } from './components/Home';
-import { MintPage } from './components/MintPage';
+import { CreatePage } from './components/CreatePage';
 import { CollectionsPage } from './components/CollectionsPage';
 import { CollectionDetailPage } from './components/CollectionDetailPage';
 import { AuctionsPage } from './components/AuctionsPage';
@@ -79,6 +79,7 @@ export type AppContextType = {
   addNFT: (nft: NFT) => void;
   updateNFT: (id: string, updates: Partial<NFT>) => void;
   addCollection: (collection: Collection) => void;
+  addTransaction: (tx: Omit<Transaction, 'id'>) => void;
   showAlert: (message: string, type: 'success' | 'error') => void;
 };
 
@@ -99,22 +100,12 @@ function App() {
     
   ]);
 
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: '1',
-      type: 'purchase',
-      nft: 'Galaxy Portal #3',
-      price: 4.5,
-      date: new Date('2024-01-22'),
-    },
-    {
-      id: '2',
-      type: 'mint',
-      nft: 'Cosmic Dream #1',
-      price: 0.01,
-      date: new Date('2024-01-15'),
-    },
-  ]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  // On refresh or new load, always start disconnected (no auto-reconnect)
+  useEffect(() => {
+    setWallet(null);
+  }, []);
 
   const fetchNFTs = async () => {
     if (typeof window.ethereum === 'undefined') {
@@ -296,6 +287,15 @@ function App() {
     }
 
     try {
+      // Try existing connection first (no popup) – e.g. after refresh if already authorized
+      const existing = await window.ethereum.request({ method: 'eth_accounts' });
+      if (existing?.length > 0) {
+        setWallet(existing[0]);
+        showAlert('Wallet connected', 'success');
+        return;
+      }
+
+      // No prior authorization – show connect popup
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts',
       });
@@ -325,16 +325,13 @@ function App() {
     showAlert('Wallet disconnected', 'success');
   };
 
+  const addTransaction = (tx: Omit<Transaction, 'id'>) => {
+    setTransactions(prev => [...prev, { ...tx, id: Date.now().toString() }]);
+  };
+
   const addNFT = (nft: NFT) => {
-    setNfts([...nfts, nft]);
-    const transaction: Transaction = {
-      id: Date.now().toString(),
-      type: 'mint',
-      nft: nft.name,
-      price: 0.01,
-      date: new Date(),
-    };
-    setTransactions([...transactions, transaction]);
+    setNfts(prev => [...prev, nft]);
+    addTransaction({ type: 'mint', nft: nft.name, price: 0.01, date: new Date() });
   };
 
   const updateNFT = (id: string, updates: Partial<NFT>) => {
@@ -368,6 +365,7 @@ function App() {
     addNFT,
     updateNFT,
     addCollection,
+    addTransaction,
     showAlert,
   };
 
@@ -384,7 +382,7 @@ function App() {
       />
       
       {currentPage === 'home' && <Home context={appContext} onNavigate={navigateTo} />}
-      {currentPage === 'mint' && <MintPage context={appContext} />}
+      {currentPage === 'create' && <CreatePage context={appContext} />}
       {currentPage === 'collections' && <CollectionsPage context={appContext} onNavigate={navigateTo} />}
       {currentPage === 'collection-detail' && selectedCollectionId && (
         <CollectionDetailPage 

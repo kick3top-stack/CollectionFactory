@@ -7,7 +7,7 @@ import { getMarketplaceContract } from '@/blockchain/contracts/marketplaceContra
 import { getCollectionFactoryContract } from '@/blockchain/contracts/factoryContract';
 import "../styles/ProfilePage.css"
 import { getErrorMessage, isUserRejection } from '@/blockchain/utils/errorMessages';
-import { WithdrawConfirmationModal } from './WithdrawConfirmationModal';
+import { WithdrawConfirmationModal, type WithdrawType } from './WithdrawConfirmationModal';
 
 type ProfilePageProps = {
   context: AppContextType;
@@ -18,44 +18,86 @@ type Tab = 'owned' | 'history';
 export function ProfilePage({ context }: ProfilePageProps) {
   const [activeTab, setActiveTab] = useState<Tab>('owned');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [isOwner, setIsOwner] = useState(false);
+  const [isMarketplaceOwner, setIsMarketplaceOwner] = useState(false);
+  const [isFactoryOwner, setIsFactoryOwner] = useState(false);
+  const [pendingBalance, setPendingBalance] = useState<number>(0);
+  const [platformFeesAmount, setPlatformFeesAmount] = useState<number>(0);
+  const [factoryBalance, setFactoryBalance] = useState<number>(0);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawableAmount, setWithdrawableAmount] = useState<number>(0);
+  const [withdrawType, setWithdrawType] = useState<WithdrawType>('balance');
 
   useEffect(() => {
-    const fetchOwnership = async () => {
-      if (!context.wallet) return;
+    const fetchOwnerAndBalances = async () => {
+      if (!context.wallet || typeof window.ethereum === 'undefined') return;
       try {
         const provider = new ethers.BrowserProvider(window.ethereum);
+        const marketplace = getMarketplaceContract(provider);
         const factory = getCollectionFactoryContract(provider);
-        const owner = await factory.owner();
-        setIsOwner(context.wallet.toLowerCase() === owner.toLowerCase());
+        const factoryAddress = await factory.getAddress();
+        const [mktOwner, pending, fees, factoryOwner, balance] = await Promise.all([
+          marketplace.owner(),
+          marketplace.pendingWithdrawals(context.wallet),
+          marketplace.platformFeesAccrued(),
+          factory.owner(),
+          provider.getBalance(factoryAddress),
+        ]);
+        setIsMarketplaceOwner(context.wallet.toLowerCase() === mktOwner.toLowerCase());
+        setIsFactoryOwner(context.wallet.toLowerCase() === factoryOwner.toLowerCase());
+        setPendingBalance(Number(ethers.formatEther(pending)));
+        setPlatformFeesAmount(Number(ethers.formatEther(fees)));
+        setFactoryBalance(Number(ethers.formatEther(balance)));
       } catch {
-        setIsOwner(false);
+        setIsMarketplaceOwner(false);
+        setIsFactoryOwner(false);
+        setPendingBalance(0);
+        setPlatformFeesAmount(0);
+        setFactoryBalance(0);
       }
     };
-    fetchOwnership();
+    fetchOwnerAndBalances();
   }, [context.wallet]);
 
-  const handleWithdrawClick = async () => {
+  const handleWithdrawBalanceClick = async () => {
     if (!context.wallet) {
       context.showAlert('Please connect your wallet first', 'error');
       return;
     }
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const marketplace = getMarketplaceContract(provider);
-      const amount = await marketplace.pendingWithdrawals(context.wallet);
-      const withdrawableETH = Number(ethers.formatEther(amount));
-      if (withdrawableETH === 0) {
-        context.showAlert('No funds available to withdraw.', 'error');
-        return;
-      }
-      setWithdrawableAmount(withdrawableETH);
-      setShowWithdrawModal(true);
-    } catch (err) {
-      context.showAlert(getErrorMessage(err), 'error');
+    if (pendingBalance <= 0) {
+      context.showAlert('No pending balance to withdraw.', 'error');
+      return;
     }
+    setWithdrawableAmount(pendingBalance);
+    setWithdrawType('balance');
+    setShowWithdrawModal(true);
+  };
+
+  const handleWithdrawPlatformFeesClick = async () => {
+    if (!context.wallet) {
+      context.showAlert('Please connect your wallet first', 'error');
+      return;
+    }
+    if (platformFeesAmount <= 0) {
+      context.showAlert('No platform fees to withdraw.', 'error');
+      return;
+    }
+    setWithdrawableAmount(platformFeesAmount);
+    setWithdrawType('platformFees');
+    setShowWithdrawModal(true);
+  };
+
+  const handleWithdrawFactoryFeesClick = async () => {
+    if (!context.wallet) {
+      context.showAlert('Please connect your wallet first', 'error');
+      return;
+    }
+    if (factoryBalance <= 0) {
+      context.showAlert('No factory fees to withdraw.', 'error');
+      return;
+    }
+    setWithdrawableAmount(factoryBalance);
+    setWithdrawType('factoryFees');
+    setShowWithdrawModal(true);
   };
 
   const handleConfirmWithdraw = async () => {
@@ -63,15 +105,36 @@ export function ProfilePage({ context }: ProfilePageProps) {
       setShowWithdrawModal(false);
       return;
     }
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    const provider = new ethers.BrowserProvider(window.ethereum!);
     const signer = await provider.getSigner();
     const marketplace = getMarketplaceContract(signer);
     setIsProcessing(true);
     try {
-      const tx = await marketplace.withdraw();
-      await tx.wait();
+      if (withdrawType === 'factoryFees') {
+        const factory = getCollectionFactoryContract(signer);
+        const tx = await factory.withdrawAllFees();
+        await tx.wait();
+      } else if (withdrawType === 'platformFees') {
+        const tx = await marketplace.withdrawPlatformFees();
+        await tx.wait();
+      } else {
+        const tx = await marketplace.withdraw();
+        await tx.wait();
+      }
       setShowWithdrawModal(false);
       context.showAlert('Withdrawal successful!', 'success');
+      const provider = new ethers.BrowserProvider(window.ethereum!);
+      const m = getMarketplaceContract(provider);
+      const f = getCollectionFactoryContract(provider);
+      const factoryAddress = await f.getAddress();
+      const [pending, fees, balance] = await Promise.all([
+        m.pendingWithdrawals(context.wallet),
+        m.platformFeesAccrued(),
+        provider.getBalance(factoryAddress),
+      ]);
+      setPendingBalance(Number(ethers.formatEther(pending)));
+      setPlatformFeesAmount(Number(ethers.formatEther(fees)));
+      setFactoryBalance(Number(ethers.formatEther(balance)));
     } catch (err) {
       if (!isUserRejection(err)) context.showAlert(getErrorMessage(err), 'error');
     } finally {
@@ -117,7 +180,14 @@ export function ProfilePage({ context }: ProfilePageProps) {
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#00FFFF] to-[#0099CC] rounded-full" />
                 <div>
-                  <h1 className="text-2xl font-bold">My Profile</h1>
+                  <h1 className="text-2xl font-bold flex items-center gap-2">
+                    My Profile
+                    {(isFactoryOwner || isMarketplaceOwner) && (
+                      <span className="text-sm font-medium px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        (admin)
+                      </span>
+                    )}
+                  </h1>
                   <p className="text-sm text-gray-400 font-mono">{context.wallet}</p>
                 </div>
               </div>
@@ -138,23 +208,42 @@ export function ProfilePage({ context }: ProfilePageProps) {
               </div>
             </div>
 
-            <div className='button-container'>
-            <button
-              onClick={context.disconnectWallet}
-              className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Disconnect Wallet
-            </button>
-            
-            {isOwner && (
+            <div className="button-container flex flex-wrap gap-2">
               <button
-                onClick={handleWithdrawClick} 
+                onClick={context.disconnectWallet}
                 disabled={isProcessing}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all bg-[#00FFFF] text-black hover:bg-[#00DDDD] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                WithDraw
+                <LogOut className="w-4 h-4" />
+                Disconnect Wallet
               </button>
+              <button
+                onClick={handleWithdrawBalanceClick}
+                disabled={isProcessing || showWithdrawModal}
+                className="flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg font-medium bg-[#00FFFF] text-black hover:bg-[#00DDDD] transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:flex-row sm:gap-2"
+              >
+                <span>Withdraw balance</span>
+                <span className="font-bold tabular-nums">Available: {pendingBalance.toFixed(4)} ETH</span>
+              </button>
+              {isMarketplaceOwner && (
+                <button
+                  onClick={handleWithdrawPlatformFeesClick}
+                  disabled={isProcessing || showWithdrawModal}
+                  className="flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:flex-row sm:gap-2"
+                >
+                  <span>Withdraw platform fees</span>
+                  <span className="font-bold tabular-nums">Available: {platformFeesAmount.toFixed(4)} ETH</span>
+                </button>
+              )}
+              {isFactoryOwner && (
+                <button
+                  onClick={handleWithdrawFactoryFeesClick}
+                  disabled={isProcessing || showWithdrawModal}
+                  className="flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:flex-row sm:gap-2"
+                >
+                  <span>Withdraw factory fees</span>
+                  <span className="font-bold tabular-nums">Available: {factoryBalance.toFixed(4)} ETH</span>
+                </button>
               )}
             </div>
           </div>
@@ -318,6 +407,7 @@ export function ProfilePage({ context }: ProfilePageProps) {
       {showWithdrawModal && (
         <WithdrawConfirmationModal
           amount={withdrawableAmount}
+          withdrawType={withdrawType}
           onConfirm={handleConfirmWithdraw}
           onCancel={() => {
             setShowWithdrawModal(false);

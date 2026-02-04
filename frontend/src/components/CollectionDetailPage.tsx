@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { AppContextType } from '../App';
 import { NFTCard } from './NFTCard';
-import { ArrowLeft, Filter } from 'lucide-react';
+import { ArrowLeft, Filter, ExternalLink, Copy, Check } from 'lucide-react';
+import { SUPPORTED_NETWORKS } from '@/abi/networks';
 
 type CollectionDetailPageProps = {
   collectionId: string;
@@ -11,12 +12,25 @@ type CollectionDetailPageProps = {
 type SortOption = 'price-low' | 'price-high' | 'date-new' | 'date-old' | 'rarity';
 type FilterStatus = 'all' | 'listed' | 'auction';
 
+const DEFAULT_EXPLORER = 'https://sepolia.etherscan.io';
+
 export function CollectionDetailPage({ collectionId, context }: CollectionDetailPageProps) {
   const [sortBy, setSortBy] = useState<SortOption>('date-new');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const collection = context.collections.find(c => c.id === collectionId);
+  const contractAddress = collection?.contractAddress ?? collection?.id ?? '';
+  const explorerBase = (SUPPORTED_NETWORKS as Record<string, { blockExplorerUrls?: string[] }>)[String(11155111)]?.blockExplorerUrls?.[0] ?? DEFAULT_EXPLORER;
+  const explorerAddressUrl = contractAddress ? `${explorerBase.replace(/\/$/, '')}/address/${contractAddress}` : '';
+
+  const handleCopyAddress = () => {
+    if (!contractAddress) return;
+    navigator.clipboard.writeText(contractAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   
   if (!collection) {
     return (
@@ -119,6 +133,37 @@ export function CollectionDetailPage({ collectionId, context }: CollectionDetail
                 </div>
               </div>
             </div>
+
+            {/* Contract address for Etherscan */}
+            {contractAddress && (
+              <div className="mt-6 p-4 bg-[#121212] rounded-xl border border-gray-800">
+                <div className="text-sm text-gray-500 mb-2">Collection contract</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-sm text-gray-300 break-all">
+                    {contractAddress}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyAddress}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                    title="Copy address"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                  {explorerAddressUrl && (
+                    <a
+                      href={explorerAddressUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#00FFFF]/10 text-[#00FFFF] hover:bg-[#00FFFF]/20 transition-colors text-sm font-medium"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View on Etherscan
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

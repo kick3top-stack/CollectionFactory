@@ -67,42 +67,64 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
       return;
     }
 
-    // Convert bidAmount to float and check for validity
-    const bid = parseFloat(bidAmount);
-    if (isNaN(bid) || bid <= (nft.highestBid || nft.minBid || 0)) {
-      context.showAlert('Bid must be higher than current bid', 'error');
+    const bidValue = parseFloat(bidAmount);
+    if (isNaN(bidValue) || bidValue <= 0) {
+      context.showAlert('Please enter a valid bid amount', 'error');
       return;
     }
 
-    // Get the provider and signer from ethers.js
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const marketplaceContract = getMarketplaceContract(signer);
-    const nftContract = getNFTContract(signer);
-
-    // Get the marketplace contract
-
-    if (nft.listingId == null) {
+    if (nft.listingId == null || nft.listingId === undefined) {
       context.showAlert('Listing not found', 'error');
       return;
     }
-    try {
-      const tx = await marketplaceContract.bid(nft.listingId, {
-        value: ethers.parseEther(bidAmount),
-      });
-      await tx.wait();
-      context.updateNFT(nft.id, { highestBid: bid });
 
-      // Show success alert
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const marketplaceContract = getMarketplaceContract(signer);
+
+    setIsProcessing(true);
+    try {
+      // Fetch current auction state from chain (listing might have changed)
+      const [listing, auction] = await Promise.all([
+        marketplaceContract.listings(nft.listingId),
+        marketplaceContract.auctions(nft.listingId),
+      ]);
+      if (!listing.active) {
+        context.showAlert('This auction is no longer active.', 'error');
+        setIsProcessing(false);
+        return;
+      }
+      const endTime = auction?.endTime != null ? Number(auction.endTime) : 0;
+      if (endTime > 0 && Math.floor(Date.now() / 1000) >= endTime) {
+        context.showAlert('This auction has ended.', 'error');
+        setIsProcessing(false);
+        return;
+      }
+      const minBidWei = auction?.highestBid ?? listing.price;
+      const minBidEth = Number(ethers.formatEther(minBidWei));
+      if (bidValue <= minBidEth) {
+        context.showAlert(`Your bid must be higher than ${minBidEth.toFixed(4)} ETH.`, 'error');
+        setIsProcessing(false);
+        return;
+      }
+
+      const valueWei = ethers.parseEther(bidAmount.trim());
+      const listingIdBigInt = BigInt(nft.listingId);
+      const tx = await marketplaceContract.bid(listingIdBigInt, { value: valueWei });
+      await tx.wait();
+      context.updateNFT(nft.id, { highestBid: bidValue });
+      context.addTransaction({ type: 'bid', nft: nft.name, price: bidValue, date: new Date() });
+
       context.showAlert('Bid placed successfully!', 'success');
-      setBidAmount(''); // Reset bid input
-      onClose(); // Close the modal or whatever you want after placing the bid
+      setBidAmount('');
+      onClose();
     } catch (error) {
       console.error('Error placing bid:', error);
-      // Don't show error for user rejection
       if (!isUserRejection(error)) {
         context.showAlert(getErrorMessage(error), 'error');
       }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -231,16 +253,20 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
       context.showAlert('Listing not found', 'error');
       return;
     }
+    setIsProcessing(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const marketplaceContract = getMarketplaceContract(signer);
-      const tx = await marketplaceContract.finalizeAuction(nft.listingId);
+      const tx = await marketplaceContract.finalizeAuction(BigInt(nft.listingId));
       await tx.wait();
       context.updateNFT(nft.id, { status: 'unlisted', listingId: undefined, price: undefined, highestBid: undefined, auctionEndTime: undefined });
       context.showAlert('Auction finalized', 'success');
+      onClose();
     } catch (error) {
       if (!isUserRejection(error)) context.showAlert(getErrorMessage(error), 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -277,6 +303,8 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
       const tx = await marketplaceContract.buy(nft.listingId, { value: priceInWei });
       await tx.wait();
       context.updateNFT(nft.id, { status: 'unlisted', owner: context.wallet!, listingId: undefined, price: undefined });
+      const priceNum = nft.price ?? 0;
+      context.addTransaction({ type: 'purchase', nft: nft.name, price: priceNum, date: new Date() });
       context.showAlert('NFT purchased successfully!', 'success');
       
       // Close the modal or page after the transaction is successful
@@ -449,27 +477,29 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
             {/* Actions */}
             {nft.status === 'auction' && context.wallet && (
               <div className="space-y-3">
-                {nft.owner.toLowerCase() === context.wallet.toLowerCase() && !auctionEnded && (  // Only show this button to the owner if the auction hasn't ended
+                {/* Once the auction has ended, anyone can finalize it (transfer NFT to winner, pay seller, etc.) */}
+                {auctionEnded && (
                   <button
                     onClick={handleEndAuction}
                     disabled={isProcessing}
-                    className={`w-full px-6 py-3 rounded-lg ${
-                          isProcessing
-                            ? 'bg-gray-600 cursor-not-allowed'
-                            : 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors font-medium flex-1 px-4 py-2 bg-[#00FFFF] text-black rounded-lg hover:bg-[#00DDDD] transition-colors font-medium'
-                        }`}
+                    className={`w-full px-6 py-3 rounded-lg font-medium ${
+                      isProcessing
+                        ? 'bg-gray-600 cursor-not-allowed'
+                        : 'bg-[#00FFFF] text-black hover:bg-[#00DDDD] transition-colors'
+                    }`}
                   >
                     {isProcessing ? (
                       <span className="flex items-center justify-center gap-2">
                         <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                        {'Ending...'}
+                        Finalizing...
                       </span>
                     ) : (
-                      'End Auction'
+                      'Finalize Auction'
                     )}
-              </button>
+                  </button>
                 )}
-                {!isOwner && (
+                {/* While the auction is running, anyone can place a bid */}
+                {!auctionEnded && (
                   <>
                     <input
                       type="number"
@@ -477,13 +507,26 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
                       placeholder="Enter bid amount (ETH)"
                       value={bidAmount}
                       onChange={(e) => setBidAmount(e.target.value)}
-                      className="w-full px-4 py-3 bg-[#121212] border border-gray-700 rounded-lg focus:outline-none focus:border-[#00FFFF]"
+                      disabled={isProcessing}
+                      className="w-full px-4 py-3 bg-[#121212] border border-gray-700 rounded-lg focus:outline-none focus:border-[#00FFFF] disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <button
                       onClick={handlePlaceBid}
-                      className="w-full px-6 py-3 bg-[#00FFFF] text-black rounded-lg hover:bg-[#00DDDD] transition-colors font-medium"
+                      disabled={isProcessing}
+                      className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
+                        isProcessing
+                          ? 'bg-gray-600 cursor-not-allowed'
+                          : 'bg-[#00FFFF] text-black hover:bg-[#00DDDD]'
+                      }`}
                     >
-                      Place Bid
+                      {isProcessing ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                          Placing bid...
+                        </span>
+                      ) : (
+                        'Place Bid'
+                      )}
                     </button>
                   </>
                 )}

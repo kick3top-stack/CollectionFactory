@@ -120,15 +120,19 @@ function getUserFriendlyMessage(technicalMessage: string): string {
   }
 
   // Auction errors
-  if (message.includes('auction')) {
-    if (message.includes('ended') || message.includes('already ended')) {
-      return 'This auction has already ended.';
+  if (
+    message.includes('auction') ||
+    message.includes('bid too low') ||
+    message.includes('inactive')
+  ) {
+    if (message.includes('ended') || message.includes('inactive')) {
+      return 'This auction has ended or is no longer active.';
     }
     if (message.includes('not yet ended')) {
       return 'This auction is still active. Please wait for it to end.';
     }
     if (message.includes('bid too low') || message.includes('bid must be higher')) {
-      return 'Your bid is too low. Please place a higher bid.';
+      return 'Your bid is too low. Enter a higher amount and try again.';
     }
     return 'Auction error. Please check the auction details and try again.';
   }
