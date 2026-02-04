@@ -1,12 +1,20 @@
 import { ethers } from "ethers";
-import { NFT_ADDRESS } from "./addresses";
-import nftJson from "../../abi/nftAbi.json";
-import { getSigner } from "../signer";
+import nftAbi from "../../abi/nftAbi.json";
 
-export function getNFTContract(signerOrProvider) {
+/**
+ * Get an NFTCollection contract instance at the given address.
+ * Each collection has its own contract address (from CollectionCreated event).
+ * @param {ethers.Signer | ethers.Provider} signerOrProvider
+ * @param {string} collectionAddress - The NFTCollection contract address
+ * @returns {ethers.Contract}
+ */
+export function getNFTContract(signerOrProvider, collectionAddress) {
+  if (!collectionAddress) {
+    throw new Error("collectionAddress is required for getNFTContract");
+  }
   return new ethers.Contract(
-    NFT_ADDRESS,
-    nftJson.abi,
+    collectionAddress,
+    nftAbi.abi,
     signerOrProvider
   );
 }

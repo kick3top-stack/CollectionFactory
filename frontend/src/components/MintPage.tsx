@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { AppContextType } from '../App';
 import { CollectionSelectModal } from './CollectionSelectModal';
 import { uploadToIPFS } from '@/blockchain/utils/ipfs';
 import { uploadJSONToIPFS } from '@/blockchain/utils/ipfs';
 import { getNFTContract } from '@/blockchain/contracts/nftContract';
+import { getCollectionFactoryContract } from '@/blockchain/contracts/factoryContract';
 import { ethers } from 'ethers';
 import { getErrorMessage, isUserRejection } from '@/blockchain/utils/errorMessages';
 
@@ -22,8 +23,24 @@ export function MintPage({ context }: MintPageProps) {
   const [useExistingCollection, setUseExistingCollection] = useState(true);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [mintFee, setMintFee] = useState('0.01');
+  const [creationFee, setCreationFee] = useState('0.05');
 
-  const mintFee = 0.01;
+  useEffect(() => {
+    if (typeof window.ethereum === 'undefined') return;
+    const loadFees = async () => {
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const factory = getCollectionFactoryContract(provider);
+        const [cf, mf] = await Promise.all([factory.creationFee(), factory.protocolMintFee()]);
+        setCreationFee(ethers.formatEther(cf));
+        setMintFee(ethers.formatEther(mf));
+      } catch {
+        // keep defaults
+      }
+    };
+    loadFees();
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,88 +104,97 @@ export function MintPage({ context }: MintPageProps) {
   setIsProcessing(true);
 
   try {
-    // Step 1: Determine collection ID
-    let collectionId = selectedCollection;
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const userAddress = await signer.getAddress();
 
-    if (!useExistingCollection) {
-      collectionId = newCollectionName.toLowerCase().replace(/\s+/g, '-');
+    const imageURL = await uploadToIPFS(imageFile);
+    if (!imageURL) throw new Error('Failed to upload image to IPFS.');
 
-      // Add new collection locally (so UI updates)
+    const metadata = {
+      name: nftName,
+      description: nftDescription,
+      image: imageURL,
+      creator: context.wallet,
+      createdAt: new Date().toISOString(),
+    };
+    const metadataURL = await uploadJSONToIPFS(metadata);
+    if (!metadataURL) throw new Error('Failed to upload metadata to IPFS.');
+
+    let collectionAddress: string;
+
+    if (useExistingCollection && selectedCollection) {
+      collectionAddress = selectedCollection;
+    } else {
+      const factory = getCollectionFactoryContract(signer);
+      const feeWei = await factory.creationFee();
+      const tx = await factory.createCollection(
+        newCollectionName.trim(),
+        newCollectionName.trim().replace(/\s+/g, '').slice(0, 10) || 'COL',
+        '',
+        { value: feeWei }
+      );
+      const receipt = await tx.wait();
+      const factoryAddress = await factory.getAddress();
+      for (const log of receipt?.logs ?? []) {
+        if (log.address !== factoryAddress) continue;
+        try {
+          const parsed = factory.interface.parseLog({ topics: log.topics as string[], data: log.data });
+          if (parsed?.name === 'CollectionCreated') {
+            collectionAddress = parsed.args?.collection ?? parsed.args?.[0];
+            break;
+          }
+        } catch {
+          // skip
+        }
+      }
+      if (!collectionAddress || !ethers.isAddress(collectionAddress)) throw new Error('Could not get new collection address');
       context.addCollection({
-        id: collectionId,
-        name: newCollectionName,
+        id: collectionAddress,
+        contractAddress: collectionAddress,
+        name: newCollectionName.trim(),
         description: `${newCollectionName} collection`,
-        image: '', // temp, will update after mint
+        image: imageURL,
         creator: context.wallet!,
         floorPrice: 0,
         nftCount: 0,
       });
     }
 
-    // Step 2: Upload image to IPFS
-    const imageURL = await uploadToIPFS(imageFile);
-    if (!imageURL) {
-      throw new Error('Failed to upload image to IPFS. Please check your internet connection and try again.');
+    const nftContract = getNFTContract(signer, collectionAddress);
+    const mintFeeWei = await getCollectionFactoryContract(provider).protocolMintFee();
+    const mintTx = await nftContract.mint(userAddress, metadataURL, { value: mintFeeWei });
+    const mintReceipt = await mintTx.wait();
+    let tokenIdStr = '1';
+    for (const log of mintReceipt?.logs ?? []) {
+      if (log.address !== collectionAddress) continue;
+      try {
+        const parsed = nftContract.interface.parseLog({ topics: log.topics as string[], data: log.data });
+        if (parsed?.name === 'Transfer' && parsed.args?.tokenId != null) {
+          tokenIdStr = String(parsed.args.tokenId);
+          break;
+        }
+      } catch {
+        // skip
+      }
     }
 
-    // Step 3: Create metadata and upload to IPFS
-    const metadata = {
-      name: nftName,
-      description: nftDescription,
-      image: imageURL,
-      collectionName: selectedCollection ? selectedCollection : newCollectionName,
-      collection: collectionId,
-      creator: context.wallet,
-      createdAt: new Date(),
-    };
-
-    const metadataURL = await uploadJSONToIPFS(metadata);
-    if (!metadataURL) {
-      throw new Error('Failed to upload metadata to IPFS. Please check your internet connection and try again.');
-    }
-
-    // Step 4: Mint NFT on-chain
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const contract = getNFTContract(signer);
-    const total = Number(await contract.tokenCounter());
-
-    const tx = await contract.mintNFT(metadataURL, selectedCollection ? selectedCollection : newCollectionName, {
-        value: ethers.parseEther("0.01"),
-      });
-
-    // Wait for blockchain confirmation
-    await tx.wait();
-
-    // Step 5: Add NFT to local state for immediate UI update
     const newNFT = {
-      id: total,
+      id: `${collectionAddress}-${tokenIdStr}`,
+      tokenId: tokenIdStr,
+      collectionAddress,
+      collection: collectionAddress,
       name: nftName,
       description: nftDescription,
       image: imageURL,
-      collection: collectionId,
       creator: context.wallet!,
       owner: context.wallet!,
       status: 'unlisted' as const,
       createdAt: new Date(),
     };
-
     context.addNFT(newNFT);
 
-    // Step 6: Update collection image if new collection
-    if (!useExistingCollection) {
-      const updatedCollection = context.collections.find(c => c.id === collectionId);
-      if (updatedCollection) updatedCollection.image = imageURL;
-    }
-
-    context.showAlert(
-      useExistingCollection
-        ? 'NFT minted successfully!'
-        : 'Collection created and NFT minted successfully!',
-      'success'
-    );
-
-    // Step 7: Reset form fields
+    context.showAlert(useExistingCollection ? 'NFT minted successfully!' : 'Collection created and NFT minted!', 'success');
     setImageFile(null);
     setImagePreview('');
     setNftName('');
@@ -256,7 +282,13 @@ export function MintPage({ context }: MintPageProps) {
               />
             </div>
 
-            <div className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-700">
+            <div className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-700 space-y-2">
+              {!useExistingCollection && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-400">Creation Fee</span>
+                  <span className="font-bold text-[#00FFFF]">{creationFee} ETH</span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-400">Mint Fee</span>
                 <span className="font-bold text-[#00FFFF]">{mintFee} ETH</span>

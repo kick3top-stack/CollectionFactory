@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { AppContextType } from '../App';
 import { NFTCard } from './NFTCard';
 import { Wallet, LogOut, Package, History } from 'lucide-react';
-import { NFT_ADDRESS } from '@/blockchain/contracts/addresses';
-import nftJson from "@/abi/nftAbi.json"
 import { ethers } from 'ethers';
+import { getMarketplaceContract } from '@/blockchain/contracts/marketplaceContract';
+import { getCollectionFactoryContract } from '@/blockchain/contracts/factoryContract';
 import "../styles/ProfilePage.css"
 import { getErrorMessage, isUserRejection } from '@/blockchain/utils/errorMessages';
 import { WithdrawConfirmationModal } from './WithdrawConfirmationModal';
@@ -22,80 +22,58 @@ export function ProfilePage({ context }: ProfilePageProps) {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawableAmount, setWithdrawableAmount] = useState<number>(0);
 
-  const getNFTContract = (signerOrProvider: ethers.Signer | ethers.Provider) => {
-    return new ethers.Contract(NFT_ADDRESS, nftJson.abi, signerOrProvider);
-  };
-
   useEffect(() => {
     const fetchOwnership = async () => {
       if (!context.wallet) return;
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const nftContract = getNFTContract(signer);
-
-      const contractOwner = await nftContract.owner();
-      setIsOwner(context.wallet.toLowerCase() === contractOwner.toLowerCase());
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const factory = getCollectionFactoryContract(provider);
+        const owner = await factory.owner();
+        setIsOwner(context.wallet.toLowerCase() === owner.toLowerCase());
+      } catch {
+        setIsOwner(false);
+      }
     };
-
-      fetchOwnership();
-    }, [context.wallet]);
+    fetchOwnership();
+  }, [context.wallet]);
 
   const handleWithdrawClick = async () => {
     if (!context.wallet) {
       context.showAlert('Please connect your wallet first', 'error');
       return;
     }
-
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const nftContract = getNFTContract(provider);
-      
-      // Fetch the contract balance
-      const balance = await provider.getBalance(nftContract.target);
-      const withdrawableETH = Number(ethers.formatEther(balance));
-
+      const marketplace = getMarketplaceContract(provider);
+      const amount = await marketplace.pendingWithdrawals(context.wallet);
+      const withdrawableETH = Number(ethers.formatEther(amount));
       if (withdrawableETH === 0) {
-        context.showAlert('No funds available to withdraw. The contract balance is zero.', 'error');
+        context.showAlert('No funds available to withdraw.', 'error');
         return;
       }
-
-      // Show confirmation modal with the amount
       setWithdrawableAmount(withdrawableETH);
       setShowWithdrawModal(true);
     } catch (err) {
-      console.error('Error fetching balance:', err);
       context.showAlert(getErrorMessage(err), 'error');
     }
   };
 
   const handleConfirmWithdraw = async () => {
     if (!context.wallet) {
-      context.showAlert('Please connect your wallet first', 'error');
       setShowWithdrawModal(false);
       return;
     }
-
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
-    const nftContract = getNFTContract(signer);
-
+    const marketplace = getMarketplaceContract(signer);
     setIsProcessing(true);
-
     try {
-      const owner: string = await nftContract.owner();
-      
-      // Call the withdraw function on the contract
-      const tx = await nftContract.withdraw(owner);
+      const tx = await marketplace.withdraw();
       await tx.wait();
-
       setShowWithdrawModal(false);
       context.showAlert('Withdrawal successful!', 'success');
     } catch (err) {
-      console.error('Error withdrawing funds:', err);
-      if (!isUserRejection(err)) {
-        context.showAlert(getErrorMessage(err), 'error');
-      }
+      if (!isUserRejection(err)) context.showAlert(getErrorMessage(err), 'error');
     } finally {
       setIsProcessing(false);
     }

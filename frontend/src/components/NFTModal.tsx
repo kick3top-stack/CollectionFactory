@@ -41,25 +41,14 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
   };
 
   const checkAuctionStatus = async () => {
+    if (nft.listingId == null) return;
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const marketplaceContract = getMarketplaceContract(signer);
-      const nftContract = getNFTContract(signer);
-
-      // Fetch auction data for this NFT
-      const auctionData = await marketplaceContract.auctions(nftContract.target, BigInt(nft.id));
-
-      // Extract auction end time from contract (auctionData.endTime should be a BigNumber)
-      const endTime = auctionData.endTime; // Should already be a BigNumber
-
-      // Convert BigNumber to a number
-      const endTimeInSeconds = Number(endTime); // Convert BigInt to number
-
-      // Get current timestamp
-      const currentTime = Math.floor(Date.now() / 1000); // Get current time in seconds
-
-      // Check if auction has ended
+      const auctionData = await marketplaceContract.auctions(nft.listingId);
+      const endTimeInSeconds = Number(auctionData.endTime);
+      const currentTime = Math.floor(Date.now() / 1000);
       setAuctionEnded(currentTime >= endTimeInSeconds);
     } catch (error) {
       console.error('Error fetching auction status:', error);
@@ -93,18 +82,15 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
 
     // Get the marketplace contract
 
+    if (nft.listingId == null) {
+      context.showAlert('Listing not found', 'error');
+      return;
+    }
     try {
-      // Send the bid transaction to the smart contract
-      const tx = await marketplaceContract.bid(
-        nftContract.target,
-        nft.id, // Assuming nft.id is the token ID
-        { value: ethers.parseEther(bidAmount) } // Sending the bid as the transaction value
-      );
-
-      // Wait for the transaction to be mined
+      const tx = await marketplaceContract.bid(nft.listingId, {
+        value: ethers.parseEther(bidAmount),
+      });
       await tx.wait();
-
-      // Update the context with the new highest bid
       context.updateNFT(nft.id, { highestBid: bid });
 
       // Show success alert
@@ -138,41 +124,23 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const marketplaceContract = getMarketplaceContract(signer);
-      const nftContract = getNFTContract(signer);
+      const nftContract = getNFTContract(signer, nft.collectionAddress);
+      const marketplaceAddress = await marketplaceContract.getAddress();
 
-      const nftAddress = nftContract.target; // Ensure this is not null or undefined
-      console.log("NFT Address: ", nftAddress); // Debugging line
+      await nftContract.ownerOf(BigInt(nft.tokenId));
 
-      const tokenExists = await nftContract.ownerOf(nft.id);
-      if (!tokenExists) {
-        context.showAlert('This NFT no longer exists or has been burned.', 'error');
-        setIsProcessing(false);
-        return;
-      }
-
-      if (!nftAddress) {
-        throw new Error("NFT contract address is missing or invalid");
-      }
-
-      // Check if the NFT is approved
-      const isApproved = await nftContract.getApproved(BigInt(nft.id)) === marketplaceContract.target;
-      const isApprovedForAll = await nftContract.isApprovedForAll(await signer.getAddress(), marketplaceContract.target);
+      const isApproved = await nftContract.getApproved(BigInt(nft.tokenId)) === marketplaceAddress;
+      const signerAddress = await signer.getAddress();
+      const isApprovedForAll = await nftContract.isApprovedForAll(signerAddress, marketplaceAddress);
 
       if (!isApproved && !isApprovedForAll) {
-        const approvalTx = await nftContract.approve(marketplaceContract.target, BigInt(nft.id));
+        const approvalTx = await nftContract.approve(marketplaceAddress, BigInt(nft.tokenId));
         await approvalTx.wait();
-        context.showAlert('Marketplace contract approved!', 'success');
+        context.showAlert('Marketplace approved', 'success');
       }
 
       const priceInWei = ethers.parseEther(price.toString());
-
-      console.log("Marketplace Contract Address: ", marketplaceContract.target); // Debugging line
-      // Ensure marketplaceContract.address is not null or undefined
-      if (!marketplaceContract.target) {
-        throw new Error("Marketplace contract address is missing or invalid");
-      }
-
-      const tx = await marketplaceContract.listItem(nftAddress, BigInt(nft.id), priceInWei);
+      const tx = await marketplaceContract.listFixedPrice(nft.collectionAddress, BigInt(nft.tokenId), priceInWei);
       await tx.wait();
 
       context.updateNFT(nft.id, { status: 'listed', price });
@@ -217,25 +185,27 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const marketplaceContract = getMarketplaceContract(signer);
-      const nftContract = getNFTContract(signer);
+      const nftContract = getNFTContract(signer, nft.collectionAddress);
+      const marketplaceAddress = await marketplaceContract.getAddress();
 
-      const nftAddress = nftContract.target; // NFT contract address
-      const tokenId = BigInt(nft.id);
-      const minBidInWei = ethers.parseEther(minPrice.toString());
+      const isApproved = await nftContract.getApproved(BigInt(nft.tokenId)) === marketplaceAddress;
+      const signerAddress = await signer.getAddress();
+      const isApprovedForAll = await nftContract.isApprovedForAll(signerAddress, marketplaceAddress);
+      if (!isApproved && !isApprovedForAll) {
+        const approvalTx = await nftContract.approve(marketplaceAddress, BigInt(nft.tokenId));
+        await approvalTx.wait();
+      }
 
-      // Calculate duration in seconds
-      const duration = Math.floor((endDate.getTime() - Date.now()) / 1000);
-
-      // Call the Marketplace contract
-      const tx = await marketplaceContract.createAuction(
-        nftAddress,
-        tokenId,
-        minBidInWei,
-        BigInt(duration)
+      const minPriceInWei = ethers.parseEther(minPrice.toString());
+      const durationSeconds = Math.floor((endDate.getTime() - Date.now()) / 1000);
+      const tx = await marketplaceContract.listAuction(
+        nft.collectionAddress,
+        BigInt(nft.tokenId),
+        minPriceInWei,
+        BigInt(durationSeconds)
       );
       await tx.wait();
 
-      // Update frontend state
       context.updateNFT(nft.id, {
         status: 'auction',
         minBid: minPrice,
@@ -257,68 +227,25 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
   };
 
   const handleEndAuction = async () => {
-  try {
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const marketplaceContract = getMarketplaceContract(signer);
-    const nftContract = getNFTContract(signer);
-
-    // Assuming that auction-related details (like token address and tokenId) are available
-    const tx = await marketplaceContract.endAuction(nftContract.target, BigInt(nft.id));
-    await tx.wait();  // Wait for the transaction to be confirmed
-
-    context.updateNFT(nft.id, { status: 'unlisted' });
-    context.showAlert('Auction ended successfully!', 'success');
-  } catch (error) {
-    console.error('Error ending auction:', error);
-    if (!isUserRejection(error)) {
-      context.showAlert(getErrorMessage(error), 'error');
-    }
-  }
-};
-
-  const handleCancelListing = async () => {
-    if (!context.wallet) {
-      context.showAlert('Please connect your wallet first', 'error');
+    if (nft.listingId == null) {
+      context.showAlert('Listing not found', 'error');
       return;
     }
-
-    setIsProcessing(true);
-
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const marketplaceContract = getMarketplaceContract(signer);
-      const nftContract = getNFTContract(signer);
-
-      const nftAddress = nftContract.target; // Make sure this is the correct NFT contract address
-      const tokenId = BigInt(nft.id); // Ensure token ID is in BigInt format
-
-      // Check if the NFT is listed on the marketplace (this check is optional, based on your UX)
-      const listing = await marketplaceContract.getListing(nftAddress, tokenId);
-      if (!listing.price || listing.price === 0n) {
-        context.showAlert('This NFT is not currently listed for sale. It may have already been sold or the listing was cancelled.', 'error');
-        setIsProcessing(false);
-        return;
-      }
-
-      // Call cancelListing on the smart contract to cancel the listing
-      const tx = await marketplaceContract.cancelListing(nftAddress, tokenId);
+      const tx = await marketplaceContract.finalizeAuction(nft.listingId);
       await tx.wait();
-
-      // Update frontend context to reflect the status change
-      context.updateNFT(nft.id, { status: 'unlisted', price: undefined });
-      context.showAlert('Listing cancelled', 'success');
-      onClose(); // Close the modal or UI component after successful cancellation
-    } catch (err: any) {
-      console.error(err);
-      setIsProcessing(false);
-      if (!isUserRejection(err)) {
-        context.showAlert(getErrorMessage(err), 'error');
-      }
-    } finally {
-      setIsProcessing(false);
+      context.updateNFT(nft.id, { status: 'unlisted', listingId: undefined, price: undefined, highestBid: undefined, auctionEndTime: undefined });
+      context.showAlert('Auction finalized', 'success');
+    } catch (error) {
+      if (!isUserRejection(error)) context.showAlert(getErrorMessage(error), 'error');
     }
+  };
+
+  const handleCancelListing = () => {
+    context.showAlert('Cancel listing is not supported by this marketplace.', 'error');
   };
 
   const handleBuy = async () => {
@@ -332,11 +259,9 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
     const marketplaceContract = getMarketplaceContract(signer);
-    const nftContract = getNFTContract(signer);
-    const priceInWei = ethers.parseEther(nft.price?.toString() || '0'); // Convert price to wei
+    const priceInWei = ethers.parseEther(nft.price?.toString() || '0');
 
     try {
-      // Get the signer and check balance
       const signerAddress = await signer.getAddress(); // Get signer address
       const balance = await provider.getBalance(signerAddress); // Fetch balance using provider
 
@@ -345,12 +270,13 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
         return;
       }
 
-      // Call the marketplace contract to execute the buy
-      const tx = await marketplaceContract.buyItem(nftContract.target, nft.id, { value: priceInWei });
-      await tx.wait(); // Wait for the transaction to be confirmed
-
-      // Update the NFT status and owner
-      context.updateNFT(nft.id, { status: 'unlisted', owner: context.wallet });
+      if (nft.listingId == null) {
+        context.showAlert('Listing not found', 'error');
+        return;
+      }
+      const tx = await marketplaceContract.buy(nft.listingId, { value: priceInWei });
+      await tx.wait();
+      context.updateNFT(nft.id, { status: 'unlisted', owner: context.wallet!, listingId: undefined, price: undefined });
       context.showAlert('NFT purchased successfully!', 'success');
       
       // Close the modal or page after the transaction is successful
@@ -394,21 +320,18 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const nftContract = getNFTContract(signer);
+      const nftContract = getNFTContract(signer, nft.collectionAddress);
+      const signerAddress = await signer.getAddress();
 
-      // Verify ownership before transfer
-      const currentOwner = await nftContract.ownerOf(BigInt(nft.id));
+      const currentOwner = await nftContract.ownerOf(BigInt(nft.tokenId));
       if (currentOwner.toLowerCase() !== context.wallet?.toLowerCase()) {
         context.showAlert('You are not the owner of this NFT', 'error');
         setIsProcessing(false);
         return;
       }
 
-      // Call the freeTransfer function on the NFT contract
-      const tx = await nftContract.freeTransfer(BigInt(nft.id), transferRecipient);
+      const tx = await nftContract.transferFrom(signerAddress, transferRecipient, BigInt(nft.tokenId));
       await tx.wait();
-
-      // Update the NFT owner in the context
       context.updateNFT(nft.id, { owner: transferRecipient });
       context.showAlert('NFT transferred successfully!', 'success');
       
@@ -589,21 +512,9 @@ export function NFTModal({ nft, context, onClose }: NFTModalProps) {
               </button>
             )}
 
+            {/* Cancel listing not supported by contract – button disabled with tooltip */}
             {nft.status === 'listed' && isOwner && (
-              <button
-                onClick={handleCancelListing}
-                className={`w-full px-6 py-3 rounded-lg  ${
-                          isProcessing
-                            ? 'bg-gray-600 cursor-not-allowed'
-                            : 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors font-medium flex-1 px-4 py-2 bg-[#00FFFF] text-black rounded-lg hover:bg-[#00DDDD] transition-colors font-medium'
-                        }`}
-              >
-                {
-                  `${
-                  isProcessing ? 'Canceling...' : 'Cancel List'
-                  }`
-                }
-              </button>
+              <p className="text-sm text-gray-500">Listing cannot be cancelled once created.</p>
             )}
 
             {nft.status === 'unlisted' && isOwner && (

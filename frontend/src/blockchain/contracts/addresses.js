@@ -1,5 +1,9 @@
-export const NFT_ADDRESS =
-  "0xEaF8273720c5FD71134907C2D98e8eC7C4f8C7F7";
+// Deployed on Sepolia (chainId 11155111)
+export const COLLECTION_FACTORY_ADDRESS =
+  "0x24C81c2c0A9a22a8bE905A412388bb234523e0bd";
 
 export const MARKETPLACE_ADDRESS =
-  "0x57Aa977e5A4BCd8056e9f237b91Fd766D7126E1e";
+  "0x382617d07b48EC99b8B3dad21BFdE7EBDa1B8934";
+
+// NFT contracts are per-collection; address comes from CollectionCreated event.
+// No single global NFT_ADDRESS.

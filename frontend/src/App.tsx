@@ -9,22 +9,39 @@ import { Navigation } from './components/Navigation';
 import { PreloadEffect } from './components/PreloadEffect';
 import { AlertModal } from './components/AlertModal';
 import { ethers } from 'ethers';
-import { NFT_ADDRESS } from './blockchain/contracts/addresses';
-import { MARKETPLACE_ADDRESS } from './blockchain/contracts/addresses';
-import nftJson from "@/abi/nftAbi.json"
-import marketplaceJson from "@/abi/marketplaceAbi.json"
+import { getCollectionFactoryContract } from './blockchain/contracts/factoryContract';
+import { getNFTContract } from './blockchain/contracts/nftContract';
+import { getMarketplaceContract } from './blockchain/contracts/marketplaceContract';
 import { getErrorMessage, isUserRejection } from './blockchain/utils/errorMessages';
+import nftAbi from '@/abi/nftAbi.json';
+
+/** Resolve ipfs:// to a gateway URL */
+function resolveTokenUri(uri: string): string {
+  if (!uri) return '';
+  if (uri.startsWith('ipfs://')) {
+    return uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
+  }
+  return uri;
+}
 
 export type NFT = {
+  /** Unique key: `${collectionAddress}-${tokenId}` */
   id: string;
+  /** Token ID on the collection contract */
+  tokenId: string;
+  /** NFTCollection contract address */
+  collectionAddress: string;
+  /** Collection id (contract address) for filtering */
+  collection: string;
   name: string;
   description: string;
   image: string;
   price?: number;
-  collection: string;
   creator: string;
   owner: string;
   status: 'listed' | 'unlisted' | 'auction';
+  /** When listed or in auction, the marketplace listingId */
+  listingId?: number;
   highestBid?: number;
   auctionEndTime?: Date;
   minBid?: number;
@@ -33,7 +50,9 @@ export type NFT = {
 };
 
 export type Collection = {
+  /** Contract address (used as id for routing) */
   id: string;
+  contractAddress: string;
   name: string;
   description: string;
   image: string;
@@ -98,95 +117,149 @@ function App() {
   ]);
 
   const fetchNFTs = async () => {
+    if (typeof window.ethereum === 'undefined') {
+      setNfts([]);
+      return;
+    }
     const provider = new ethers.BrowserProvider(window.ethereum);
-    const nftContract = new ethers.Contract(
-      NFT_ADDRESS,
-      nftJson.abi,
-      provider
-    );
-    const marketplaceContract = new ethers.Contract(
-      MARKETPLACE_ADDRESS,
-      marketplaceJson.abi,
-      provider
+    const factory = getCollectionFactoryContract(provider);
+    const marketplace = getMarketplaceContract(provider);
+
+    // 1. Get all collections from CollectionCreated events
+    const createdEvents = await factory.queryFilter(factory.filters.CollectionCreated());
+    const collectionsList: { address: string; name: string; creator: string }[] = createdEvents.map(
+      (e) => ({
+        address: e.args?.collection ?? e.args?.[0],
+        name: (e.args?.name ?? e.args?.[1])?.toString() ?? '',
+        creator: (e.args?.creator ?? e.args?.[2]) ?? '',
+      })
     );
 
-    const total = Number(await nftContract.tokenCounter());
+    const listingMap = new Map<string, { listingId: number; price: bigint; saleType: number; endTime?: bigint; highestBid?: bigint; finalized?: boolean }>();
+
+    // 2. Build listing map from marketplace (listingId 1 .. nextListingId-1)
+    try {
+      const nextId = await marketplace.nextListingId();
+      const maxId = Number(nextId);
+      for (let listingId = 1; listingId < maxId; listingId++) {
+        const [listing, auction] = await Promise.all([
+          marketplace.listings(listingId),
+          marketplace.auctions(listingId),
+        ]);
+        if (!listing.active) continue;
+        const key = `${listing.nft.toLowerCase()}-${listing.tokenId.toString()}`;
+        listingMap.set(key, {
+          listingId,
+          price: listing.price,
+          saleType: Number(listing.saleType),
+          endTime: auction?.endTime,
+          highestBid: auction?.highestBid,
+          finalized: auction?.finalized,
+        });
+      }
+    } catch (e) {
+      console.warn('Marketplace listings fetch failed', e);
+    }
+
     const fetchedNFTs: NFT[] = [];
+    const zeroAddress = ethers.ZeroAddress;
 
-    for (let tokenId = 0; tokenId < total; tokenId++) {
-      const tokenURI = await nftContract.tokenURI(tokenId);
-      const owner = await nftContract.ownerOf(tokenId);
-      // Fetch on-chain collection name from the contract
-      const onChainCollectionName = await nftContract.collections(tokenId);
-      const metadata = await fetch(tokenURI).then(res => res.json());
+    for (const col of collectionsList) {
+      const collectionAddress = ethers.getAddress(col.address);
+      const nftContract = new ethers.Contract(collectionAddress, nftAbi.abi, provider);
 
-      const listing = await marketplaceContract.getListing(
-            NFT_ADDRESS,
-            tokenId,
-          );
-          console.log(nftContract.target)
-      
-      let price: number | undefined;
-      let status: 'listed' | 'unlisted' | 'auction' = 'unlisted';
+      // 3. Get minted token IDs from Transfer(from=0) events
+      const transferEvents = await nftContract.queryFilter(
+        nftContract.filters.Transfer(zeroAddress)
+      );
+      const tokenIds = transferEvents.map((e) => (e.args?.tokenId ?? e.args?.[2])?.toString()).filter(Boolean);
 
-      if (listing.price > 0n) {
-        price = parseFloat(ethers.formatEther(listing.price));
-        status = 'listed';
+      for (const tokenIdStr of tokenIds) {
+        try {
+          const tokenId = BigInt(tokenIdStr);
+          const [tokenURI, owner] = await Promise.all([
+            nftContract.tokenURI(tokenId),
+            nftContract.ownerOf(tokenId),
+          ]);
+          const metadataUrl = resolveTokenUri(tokenURI);
+          const metadata = await fetch(metadataUrl).then((res) => res.json()).catch(() => ({}));
+
+          const listKey = `${collectionAddress.toLowerCase()}-${tokenIdStr}`;
+          const listInfo = listingMap.get(listKey);
+
+          let status: 'listed' | 'unlisted' | 'auction' = 'unlisted';
+          let price: number | undefined;
+          let listingId: number | undefined;
+          let highestBid: number | undefined;
+          let auctionEndTime: Date | undefined;
+          let minBid: number | undefined;
+
+          if (listInfo) {
+            listingId = listInfo.listingId;
+            price = parseFloat(ethers.formatEther(listInfo.price));
+            if (listInfo.saleType === 1) {
+              status = 'auction';
+              if (listInfo.endTime != null) {
+                const endSec = Number(listInfo.endTime);
+                if (endSec > Date.now() / 1000 && !listInfo.finalized) {
+                  auctionEndTime = new Date(endSec * 1000);
+                  highestBid = listInfo.highestBid != null ? parseFloat(ethers.formatEther(listInfo.highestBid)) : undefined;
+                  minBid = price;
+                }
+              }
+            } else {
+              status = 'listed';
+            }
+          }
+
+          const id = `${collectionAddress}-${tokenIdStr}`;
+          fetchedNFTs.push({
+            id,
+            tokenId: tokenIdStr,
+            collectionAddress,
+            collection: collectionAddress,
+            name: metadata?.name ?? `#${tokenIdStr}`,
+            description: metadata?.description ?? '',
+            image: metadata?.image ?? '',
+            price,
+            creator: metadata?.creator ?? col.creator,
+            owner,
+            status,
+            listingId,
+            highestBid,
+            auctionEndTime,
+            minBid,
+            createdAt: metadata?.createdAt ? new Date(metadata.createdAt) : new Date(),
+          });
+        } catch (err) {
+          console.warn(`Skip token ${tokenIdStr} in ${collectionAddress}`, err);
+        }
       }
-
-      const auction = await marketplaceContract.getAuction(nftContract.target, tokenId);
-      if (auction.endTime && auction.endTime > Date.now() / 1000 && !auction.ended) {
-          status = 'auction';
-      }
-
-      // Fetch auction details if auction exists and is not ended
-      let highestBid: number | undefined;
-      let auctionEndTime: Date | undefined;
-      let minBid: number | undefined;
-
-      if (auction && auction.endTime && !auction.ended) {
-          highestBid = auction.highestBid ? parseFloat(ethers.formatEther(auction.highestBid)) : undefined;
-          auctionEndTime = new Date(Number(auction.endTime) * 1000); // Convert endTime (seconds) to Date
-          minBid = auction.minBid ? parseFloat(ethers.formatEther(auction.minBid)) : undefined;
-      }
-          
-      // Normalize collection name: convert to lowercase and replace spaces with hyphens for consistency
-      const normalizedCollection = onChainCollectionName.toLowerCase().replace(/\s+/g, '-');
-          
-      fetchedNFTs.push({
-        id: tokenId.toString(),
-        name: metadata.name,
-        description: metadata.description,
-        image: metadata.image,
-        price,
-        collection: normalizedCollection, // Use on-chain collection name instead of metadata
-        creator: metadata.creator,
-        owner: owner,
-        status: status,
-        highestBid,
-        auctionEndTime,
-        minBid,
-        createdAt: metadata.createdAt,
-      });
-      console.log({
-        id: tokenId.toString(),
-        name: metadata.name,
-        description: metadata.description,
-        image: metadata.image,
-        price,
-        collection: normalizedCollection,
-        onChainCollectionName,
-        creator: metadata.creator,
-        owner: owner,
-        status: status,
-        highestBid,
-        auctionEndTime,
-        minBid,
-        createdAt: metadata.createdAt,
-      });
     }
 
     setNfts(fetchedNFTs);
+
+    // 4. Build collections from collectionsList + fetchedNFTs (floorPrice, nftCount)
+    const collectionMap = new Map<string, Collection>();
+    for (const col of collectionsList) {
+      const addr = ethers.getAddress(col.address);
+      const colNfts = fetchedNFTs.filter((n) => n.collectionAddress.toLowerCase() === addr.toLowerCase());
+      const available = colNfts.filter((n) => n.status === 'listed' || n.status === 'auction');
+      const floorPrice = available.length
+        ? Math.min(...available.map((n) => n.price ?? Infinity).filter((p) => p !== Infinity))
+        : 0;
+      collectionMap.set(addr, {
+        id: addr,
+        contractAddress: addr,
+        name: col.name || `Collection ${addr.slice(0, 10)}...`,
+        description: `Collection of ${col.name || 'NFTs'}`,
+        image: colNfts[0]?.image ?? '',
+        creator: col.creator,
+        floorPrice: Number.isFinite(floorPrice) ? floorPrice : 0,
+        nftCount: available.length,
+      });
+    }
+    setCollections(Array.from(collectionMap.values()));
   };
 
   useEffect(() => {
@@ -199,60 +272,21 @@ function App() {
 
   useEffect(() => {
     if (nfts.length === 0) return;
-
-    // Map to store collection data: key is normalized collection ID, value is Collection object
-    const collectionMap = new Map<string, Collection>();
-    // Map to store actual on-chain collection names: key is normalized ID, value is actual name
-    const collectionNamesMap = new Map<string, string>();
-
-    for (const nft of nfts) {
-      // Only count NFTs that are listed or in auction (available for purchase)
-      const isAvailable = nft.status === 'listed' || nft.status === 'auction';
-      
-      // nft.collection is already normalized from fetchNFTs
-      const key = nft.collection;
-
-      if (!collectionMap.has(key)) {
-        // Try to get the actual collection name from the first NFT's metadata or use formatted key
-        // Since we're using normalized IDs, we'll format it for display
-        const displayName = key
-          .split('-')
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ');
-        
-        collectionMap.set(key, {
-          id: key,
-          name: displayName,
-          description: `Collection of ${displayName} NFTs`,
-          image: nft.image,
-          creator: nft.creator,
-          floorPrice: isAvailable && nft.price ? nft.price : Infinity,
-          nftCount: isAvailable ? 1 : 0,
-        });
-      } else {
-        const col = collectionMap.get(key)!;
-        
-        // Only increment count for listed/auction items
-        if (isAvailable) {
-          col.nftCount += 1;
-        }
-
-        // Update floor price only for available items with a price
-        if (isAvailable && nft.price && nft.price < col.floorPrice) {
-          col.floorPrice = nft.price;
-        }
-      }
-    }
-
-    // Replace Infinity with 0 for unlisted collections and filter out collections with 0 items
-    const finalCollections = Array.from(collectionMap.values())
-      .map(c => ({
-        ...c,
-        floorPrice: c.floorPrice === Infinity ? 0 : c.floorPrice,
-      }))
-      .filter(c => c.nftCount > 0); // Only show collections with available items
-
-    setCollections(finalCollections);
+    setCollections((prev) =>
+      prev.map((c) => {
+        const colNfts = nfts.filter((n) => n.collectionAddress.toLowerCase() === c.contractAddress.toLowerCase());
+        const available = colNfts.filter((n) => n.status === 'listed' || n.status === 'auction');
+        const floorPrice = available.length
+          ? Math.min(...available.map((n) => n.price ?? Infinity).filter((p) => p !== Infinity))
+          : 0;
+        return {
+          ...c,
+          floorPrice: Number.isFinite(floorPrice) ? floorPrice : 0,
+          nftCount: available.length,
+          image: colNfts[0]?.image ?? c.image,
+        };
+      })
+    );
   }, [nfts]);
 
   const connectWallet = async () => {
@@ -308,7 +342,7 @@ function App() {
   };
 
   const addCollection = (collection: Collection) => {
-    
+    setCollections((prev) => (prev.some((c) => c.id === collection.id) ? prev : [...prev, collection]));
   };
 
   const showAlert = (message: string, type: 'success' | 'error') => {
