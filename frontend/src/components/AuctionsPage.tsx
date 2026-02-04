@@ -53,19 +53,19 @@ export function AuctionsPage({ context }: AuctionsPageProps) {
   };
 
   return (
-    <div className="min-h-screen py-16 px-4">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8">Live Auctions</h1>
+    <div className="app-page">
+      <div className="app-container">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-6 sm:mb-8">Live Auctions</h1>
 
         {/* Featured Auctions */}
         {featuredAuctions.length > 0 && (
-          <section className="mb-16">
-            <div className="flex items-center gap-2 mb-6">
-              <Trophy className="w-6 h-6 text-yellow-500" />
-              <h2 className="text-2xl font-bold">Featured Auctions</h2>
+          <section className="mb-10 sm:mb-16">
+            <div className="flex items-center gap-2 mb-4 sm:mb-6">
+              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 shrink-0" />
+              <h2 className="text-xl sm:text-2xl font-bold">Featured Auctions</h2>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {featuredAuctions.map(nft => (
                 <div key={nft.id} className="relative">
                   <div className="absolute -top-3 -right-3 z-10 bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-bold">
@@ -80,15 +80,15 @@ export function AuctionsPage({ context }: AuctionsPageProps) {
 
         {/* All Auctions */}
         <section>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h2 className="text-2xl font-bold">All Auctions ({auctionNFTs.length})</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold">All Auctions ({auctionNFTs.length})</h2>
             
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <ArrowUpDown className="w-4 h-4 text-gray-400 shrink-0" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="px-4 py-2 bg-[#1a1a1a] border border-gray-800 rounded-lg focus:outline-none focus:border-[#00FFFF]"
+                className="flex-1 sm:flex-none min-h-[44px] px-4 py-2 bg-[#1a1a1a] border border-gray-800 rounded-lg focus:outline-none focus:border-[#00FFFF]"
               >
                 <option value="bid-high">Highest Bid</option>
                 <option value="bid-low">Lowest Bid</option>
@@ -101,8 +101,8 @@ export function AuctionsPage({ context }: AuctionsPageProps) {
           {auctionNFTs.length > 0 ? (
             <>
               {/* Desktop Table View */}
-              <div className="hidden lg:block bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden mb-8">
-                <table className="w-full">
+              <div className="hidden lg:block bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-x-auto mb-6 sm:mb-8">
+                <table className="w-full min-w-[600px]">
                   <thead className="bg-[#121212] border-b border-gray-800">
                     <tr>
                       <th className="text-left p-4">NFT</th>
@@ -163,7 +163,7 @@ export function AuctionsPage({ context }: AuctionsPageProps) {
               </div>
 
               {/* Mobile/Tablet Card View */}
-              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {auctionNFTs.map(nft => (
                   <NFTCard key={nft.id} nft={nft} context={context} compact />
                 ))}

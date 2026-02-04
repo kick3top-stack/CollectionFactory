@@ -68,40 +68,32 @@ export function CollectionsPage({ context, onNavigate }: CollectionsPageProps) {
   }, [displayedCollections.length, sortedCollections.length]);
 
   return (
-    <div className="min-h-screen py-16 px-4">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8">Collections</h1>
+    <div className="app-page">
+      <div className="app-container">
+        <h1 className="app-page-title">Collections</h1>
 
         {/* Desktop Table View */}
-        <div className="hidden md:block bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-[#121212] border-b border-gray-800">
+        <div className="hidden md:block app-card overflow-x-auto rounded-xl">
+          <div className="app-table-wrap">
+            <table className="app-table">
+            <thead>
               <tr>
-                <th className="text-left p-4">Image</th>
-                <th className="text-left p-4">
-                  <button
-                    onClick={() => handleSort('name')}
-                    className="flex items-center gap-2 hover:text-[#00FFFF] transition-colors"
-                  >
+                <th>Image</th>
+                <th>
+                  <button type="button" onClick={() => handleSort('name')} className="flex items-center gap-2 hover:text-[var(--app-primary)] transition-colors bg-transparent border-none cursor-pointer text-inherit">
                     Name
                     <ArrowUpDown className="w-4 h-4" />
                   </button>
                 </th>
-                <th className="text-left p-4">Description</th>
-                <th className="text-left p-4">
-                  <button
-                    onClick={() => handleSort('nftCount')}
-                    className="flex items-center gap-2 hover:text-[#00FFFF] transition-colors"
-                  >
+                <th>Description</th>
+                <th>
+                  <button type="button" onClick={() => handleSort('nftCount')} className="flex items-center gap-2 hover:text-[var(--app-primary)] transition-colors bg-transparent border-none cursor-pointer text-inherit">
                     NFTs
                     <ArrowUpDown className="w-4 h-4" />
                   </button>
                 </th>
-                <th className="text-left p-4">
-                  <button
-                    onClick={() => handleSort('floorPrice')}
-                    className="flex items-center gap-2 hover:text-[#00FFFF] transition-colors"
-                  >
+                <th>
+                  <button type="button" onClick={() => handleSort('floorPrice')} className="flex items-center gap-2 hover:text-[var(--app-primary)] transition-colors bg-transparent border-none cursor-pointer text-inherit">
                     Floor Price
                     <ArrowUpDown className="w-4 h-4" />
                   </button>
@@ -111,111 +103,69 @@ export function CollectionsPage({ context, onNavigate }: CollectionsPageProps) {
             <tbody>
               {context.loading ? (
                 Array.from({ length: 9 }).map((_, i) => (
-                  <tr key={i} className="border-b border-gray-800">
-                    <td className="p-4">
-                      <Skeleton className="w-16 h-16 rounded-lg flex-shrink-0 bg-gray-700/50" />
-                    </td>
-                    <td className="p-4">
-                      <Skeleton className="h-4 w-40 rounded-lg bg-gray-700/50" />
-                    </td>
-                    <td className="p-4">
-                      <Skeleton className="h-4 max-w-xs w-full rounded-lg bg-gray-700/50" />
-                    </td>
-                    <td className="p-4">
-                      <Skeleton className="h-4 w-12 rounded-lg bg-gray-700/50" />
-                    </td>
-                    <td className="p-4">
-                      <Skeleton className="h-4 w-20 rounded-lg bg-gray-700/50" />
-                    </td>
+                  <tr key={i}>
+                    <td><Skeleton className="w-16 h-16 rounded-lg flex-shrink-0" /></td>
+                    <td><Skeleton className="h-4 w-40 rounded-lg" /></td>
+                    <td><Skeleton className="h-4 max-w-xs w-full rounded-lg" /></td>
+                    <td><Skeleton className="h-4 w-12 rounded-lg" /></td>
+                    <td><Skeleton className="h-4 w-20 rounded-lg" /></td>
                   </tr>
                 ))
               ) : (
-                displayedCollections.map(collection => (
+                displayedCollections.map((collection) => (
                   <tr
                     key={collection.id}
+                    data-clickable
                     onClick={() => onNavigate('collection-detail', collection.id)}
-                    className="border-b border-gray-800 hover:bg-white/5 cursor-pointer transition-colors"
                   >
-                    <td className="p-4">
-                      <img
-                        src={collection.image}
-                        alt={collection.name}
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
+                    <td>
+                      <img src={collection.image} alt={collection.name} className="w-16 h-16 rounded-lg object-cover" />
                     </td>
-                    <td className="p-4 font-bold">{collection.name}</td>
-                    <td className="p-4 text-gray-400 max-w-xs truncate">
-                      {collection.description}
-                    </td>
-                    <td className="p-4">{collection.nftCount}</td>
-                    <td className="p-4 text-[#00FFFF] font-bold">
-                      {collection.floorPrice > 0 ? `${collection.floorPrice} ETH` : 'N/A'}
-                    </td>
+                    <td className="font-bold">{collection.name}</td>
+                    <td className="text-[var(--app-text-muted)] max-w-xs truncate">{collection.description}</td>
+                    <td>{collection.nftCount}</td>
+                    <td className="app-price">{collection.floorPrice > 0 ? `${collection.floorPrice} ETH` : 'N/A'}</td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4">
           <div className="flex gap-2 overflow-x-auto pb-2">
-            <button
-              onClick={() => handleSort('name')}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-                sortField === 'name'
-                  ? 'bg-[#00FFFF] text-black'
-                  : 'bg-[#1a1a1a] text-gray-400'
-              }`}
-            >
-              Name
-            </button>
-            <button
-              onClick={() => handleSort('floorPrice')}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-                sortField === 'floorPrice'
-                  ? 'bg-[#00FFFF] text-black'
-                  : 'bg-[#1a1a1a] text-gray-400'
-              }`}
-            >
-              Floor Price
-            </button>
-            <button
-              onClick={() => handleSort('nftCount')}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-                sortField === 'nftCount'
-                  ? 'bg-[#00FFFF] text-black'
-                  : 'bg-[#1a1a1a] text-gray-400'
-              }`}
-            >
-              NFT Count
-            </button>
+            <button type="button" onClick={() => handleSort('name')} className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors min-h-[var(--app-touch-min)] ${sortField === 'name' ? 'bg-[var(--app-primary)] text-[var(--app-text-inverse)]' : 'bg-[var(--app-surface)] text-[var(--app-text-muted)]'}`}>Name</button>
+            <button type="button" onClick={() => handleSort('floorPrice')} className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors min-h-[var(--app-touch-min)] ${sortField === 'floorPrice' ? 'bg-[var(--app-primary)] text-[var(--app-text-inverse)]' : 'bg-[var(--app-surface)] text-[var(--app-text-muted)]'}`}>Floor Price</button>
+            <button type="button" onClick={() => handleSort('nftCount')} className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors min-h-[var(--app-touch-min)] ${sortField === 'nftCount' ? 'bg-[var(--app-primary)] text-[var(--app-text-inverse)]' : 'bg-[var(--app-surface)] text-[var(--app-text-muted)]'}`}>NFT Count</button>
           </div>
 
           {context.loading ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden hover:border-gray-700 transition-all">
+              <div key={i} className="app-card">
                 <div className="flex gap-4 p-4">
-                  <Skeleton className="w-20 h-20 rounded-lg flex-shrink-0 bg-gray-700/50" />
+                  <Skeleton className="w-20 h-20 rounded-lg flex-shrink-0" />
                   <div className="flex-1 min-w-0 space-y-2">
-                    <Skeleton className="h-5 w-3/4 max-w-[160px] rounded-lg bg-gray-700/50" />
-                    <Skeleton className="h-3 w-full max-w-[200px] rounded-lg bg-gray-700/50" />
-                    <Skeleton className="h-3 w-2/3 max-w-[140px] rounded-lg bg-gray-700/50" />
+                    <Skeleton className="h-5 w-3/4 max-w-[160px] rounded-lg" />
+                    <Skeleton className="h-3 w-full max-w-[200px] rounded-lg" />
                     <div className="flex gap-4 pt-1">
-                      <Skeleton className="h-4 w-16 rounded-lg bg-gray-700/50" />
-                      <Skeleton className="h-4 w-20 rounded-lg bg-gray-700/50" />
+                      <Skeleton className="h-4 w-16 rounded-lg" />
+                      <Skeleton className="h-4 w-20 rounded-lg" />
                     </div>
                   </div>
                 </div>
               </div>
             ))
           ) : (
-            displayedCollections.map(collection => (
+            displayedCollections.map((collection) => (
               <div
                 key={collection.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => onNavigate('collection-detail', collection.id)}
-                className="bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden hover:border-[#00FFFF] transition-all"
+                onKeyDown={(e) => e.key === 'Enter' && onNavigate('collection-detail', collection.id)}
+                className="app-card app-card--clickable"
               >
                 <div className="flex gap-4 p-4">
                   <img
@@ -225,20 +175,10 @@ export function CollectionsPage({ context, onNavigate }: CollectionsPageProps) {
                   />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold mb-1">{collection.name}</h3>
-                    <p className="text-sm text-gray-400 line-clamp-2 mb-2">
-                      {collection.description}
-                    </p>
+                    <p className="text-sm text-[var(--app-text-muted)] line-clamp-2 mb-2">{collection.description}</p>
                     <div className="flex gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Items: </span>
-                        <span>{collection.nftCount}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Floor: </span>
-                        <span className="text-[#00FFFF] font-bold">
-                          {collection.floorPrice > 0 ? `${collection.floorPrice} ETH` : 'N/A'}
-                        </span>
-                      </div>
+                      <div><span className="app-meta-label">Items: </span><span>{collection.nftCount}</span></div>
+                      <div><span className="app-meta-label">Floor: </span><span className="app-price">{collection.floorPrice > 0 ? `${collection.floorPrice} ETH` : 'N/A'}</span></div>
                     </div>
                   </div>
                 </div>

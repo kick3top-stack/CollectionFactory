@@ -184,10 +184,10 @@ html {
   font-size: var(--font-size);
 }
 
-/* NFT Marketplace Custom Styles */
+/* NFT Marketplace — scrollbars use theme */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #00FFFF #1a1a1a;
+  scrollbar-color: var(--app-primary) var(--app-surface);
 }
 
 *::-webkit-scrollbar {
@@ -196,16 +196,16 @@ html {
 }
 
 *::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: var(--app-surface);
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #00FFFF;
+  background: var(--app-primary);
   border-radius: 4px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #00DDDD;
+  background: var(--app-primary-hover);
 }
 
 /* Smooth scrolling */
@@ -228,12 +228,4 @@ html {
   overflow: hidden;
 }
 
-/* Skeleton: gradual brighten/darken (keyframes; animation applied via inline style in Skeleton.tsx) */
-@keyframes skeleton-glow {
-  0%, 100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
+/* Skeleton animation moved to components.css (.app-skeleton) */

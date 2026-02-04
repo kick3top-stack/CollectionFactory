@@ -218,16 +218,16 @@ export function ProfilePage({ context }: ProfilePageProps) {
 
 
   return (
-    <div className="min-h-screen py-16 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="app-page">
+      <div className="app-container">
         {/* Profile Header */}
-        <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800 p-6 md:p-8 mb-8">
+        <div className="bg-[#1a1a1a] rounded-2xl border border-gray-800 p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#00FFFF] to-[#0099CC] rounded-full" />
-                <div>
-                  <h1 className="text-2xl font-bold flex items-center gap-2">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#00FFFF] to-[#0099CC] rounded-full shrink-0" />
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-bold flex flex-wrap items-center gap-2">
                     My Profile
                     {(isFactoryOwner || isMarketplaceOwner) && (
                       <span className="text-sm font-medium px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
@@ -235,11 +235,11 @@ export function ProfilePage({ context }: ProfilePageProps) {
                       </span>
                     )}
                   </h1>
-                  <p className="text-sm text-gray-400 font-mono">{context.wallet}</p>
+                  <p className="text-xs sm:text-sm text-gray-400 font-mono truncate">{context.wallet}</p>
                 </div>
               </div>
               
-              <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-4 sm:mt-6">
                 <div>
                   <div className="text-sm text-gray-400">Total NFTs</div>
                   <div className="text-2xl font-bold">{ownedNFTs.length}</div>
@@ -277,10 +277,10 @@ export function ProfilePage({ context }: ProfilePageProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+        <div className="flex gap-2 mb-6 sm:mb-8 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
           <button
             onClick={() => setActiveTab('owned')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 sm:px-6 py-3 min-h-[48px] rounded-lg transition-all whitespace-nowrap shrink-0 ${
               activeTab === 'owned'
                 ? 'bg-[#00FFFF] text-black'
                 : 'bg-[#1a1a1a] text-gray-400 hover:bg-white/5'
@@ -291,7 +291,7 @@ export function ProfilePage({ context }: ProfilePageProps) {
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 sm:px-6 py-3 min-h-[48px] rounded-lg transition-all whitespace-nowrap shrink-0 ${
               activeTab === 'history'
                 ? 'bg-[#00FFFF] text-black'
                 : 'bg-[#1a1a1a] text-gray-400 hover:bg-white/5'
@@ -356,16 +356,16 @@ export function ProfilePage({ context }: ProfilePageProps) {
         {activeTab === 'history' && (
           <div>
             {loadingTxs ? (
-              <div className="flex items-center justify-center py-16 bg-[#1a1a1a] rounded-xl border border-gray-800">
-                <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin " />
-                <span className="ml-3 text-gray-400"><p>  Loading from chain...</p></span>
+              <div className="app-loading-block">
+                <div className="app-spinner" />
+                <span className="app-loading-text">Loading from chain...</span>
               </div>
             ) : onChainTxs.length > 0 ? (
               <>
                 <div className="bg-[#1a1a1a] rounded-xl border border-gray-800 overflow-hidden">
                   {/* Desktop: table */}
                   <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-[640px]">
                       <thead className="bg-[#121212] border-b border-gray-800">
                         <tr>
                           <th className="text-left p-4">Type</th>

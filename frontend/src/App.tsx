@@ -7,6 +7,7 @@ import { AuctionsPage } from './components/AuctionsPage';
 import { ProfilePage } from './components/ProfilePage';
 import { Navigation } from './components/Navigation';
 import { AlertModal } from './components/AlertModal';
+import { Footer } from './components/Footer';
 import { ethers } from 'ethers';
 import { getCollectionFactoryContract } from './blockchain/contracts/factoryContract';
 import { getNFTContract } from './blockchain/contracts/nftContract';
@@ -162,7 +163,18 @@ function App() {
       })
     );
 
-    const listingMap = new Map<string, { listingId: number; price: bigint; saleType: number; endTime?: bigint; highestBid?: bigint; finalized?: boolean }>();
+    const listingMap = new Map<
+      string,
+      {
+        listingId: number;
+        price: bigint;
+        saleType: number;
+        seller: string;
+        endTime?: bigint;
+        highestBid?: bigint;
+        finalized?: boolean;
+      }
+    >();
 
     // 2. Build listing map from marketplace (listingId 1 .. nextListingId-1)
     try {
@@ -179,6 +191,7 @@ function App() {
           listingId,
           price: listing.price,
           saleType: Number(listing.saleType),
+          seller: listing.seller,
           endTime: auction?.endTime,
           highestBid: auction?.highestBid,
           finalized: auction?.finalized,
@@ -204,7 +217,7 @@ function App() {
       for (const tokenIdStr of tokenIds) {
         try {
           const tokenId = BigInt(tokenIdStr);
-          const [tokenURI, owner] = await Promise.all([
+          const [tokenURI, chainOwner] = await Promise.all([
             nftContract.tokenURI(tokenId),
             nftContract.ownerOf(tokenId),
           ]);
@@ -239,6 +252,10 @@ function App() {
             }
           }
 
+          // If the NFT is listed/auctioned, it may be escrowed in the marketplace contract.
+          // For UI purposes (My NFTs), treat the seller as the owner while the listing is active.
+          const uiOwner = listInfo?.seller ?? chainOwner;
+
           const id = `${collectionAddress}-${tokenIdStr}`;
           fetchedNFTs.push({
             id,
@@ -250,7 +267,7 @@ function App() {
             image: metadata?.image ?? '',
             price,
             creator: metadata?.creator ?? col.creator,
-            owner,
+            owner: uiOwner,
             status,
             listingId,
             highestBid,
@@ -275,7 +292,7 @@ function App() {
       const floorPrice = available.length
         ? Math.min(...available.map((n) => n.price ?? Infinity).filter((p) => p !== Infinity))
         : 0;
-      let collectionImage = colNfts[0]?.image ?? '';
+      let collectionImage = '';
       let collectionName = col.name || `Collection ${addr.slice(0, 10)}...`;
       let collectionDescription = `Collection of ${col.name || 'NFTs'}`;
       try {
@@ -284,12 +301,18 @@ function App() {
         if (metadataURI && String(metadataURI).trim()) {
           const url = resolveTokenUri(String(metadataURI));
           const meta = await fetch(url).then((r) => r.json()).catch(() => null);
-          if (meta?.image) collectionImage = meta.image;
+          if (meta?.image && meta.image.trim()) {
+            collectionImage = meta.image.trim();
+          }
           if (meta?.name) collectionName = meta.name;
           if (meta?.description) collectionDescription = meta.description;
         }
       } catch {
-        // use defaults from event / first NFT
+        // metadata fetch failed, will fall back to first NFT below
+      }
+      // Only use first NFT image if we don't have a collection image from metadata
+      if (!collectionImage || collectionImage.trim() === '') {
+        collectionImage = colNfts[0]?.image ?? '';
       }
       collectionMap.set(addr, {
         id: addr,
@@ -328,7 +351,8 @@ function App() {
         const floorPrice = available.length
           ? Math.min(...available.map((n) => n.price ?? Infinity).filter((p) => p !== Infinity))
           : 0;
-        const collectionImage = (c.image && c.image.trim() !== '') ? c.image : (colNfts[0]?.image ?? '');
+        // Preserve existing collection image (from metadata) - don't overwrite with first NFT
+        const collectionImage = (c.image && c.image.trim() !== '') ? c.image : '';
         return {
           ...c,
           floorPrice: Number.isFinite(floorPrice) ? floorPrice : 0,
@@ -430,24 +454,33 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white">
-      <Navigation 
-        currentPage={currentPage} 
+    <div className="app-shell flex flex-col">
+      <Navigation
+        currentPage={currentPage}
         onNavigate={navigateTo}
         context={appContext}
       />
-      
-      {currentPage === 'home' && <Home context={appContext} onNavigate={navigateTo} />}
-      {currentPage === 'create' && <CreatePage context={appContext} />}
-      {currentPage === 'collections' && <CollectionsPage context={appContext} onNavigate={navigateTo} />}
-      {currentPage === 'collection-detail' && selectedCollectionId && (
-        <CollectionDetailPage 
-          collectionId={selectedCollectionId} 
-          context={appContext}
-        />
-      )}
-      {currentPage === 'auctions' && <AuctionsPage context={appContext} />}
-      {currentPage === 'profile' && <ProfilePage context={appContext} />}
+
+      <main className="flex-1">
+        {currentPage === 'home' && (
+          <Home context={appContext} onNavigate={navigateTo} />
+        )}
+        {currentPage === 'create' && <CreatePage context={appContext} />}
+        {currentPage === 'collections' && (
+          <CollectionsPage context={appContext} onNavigate={navigateTo} />
+        )}
+        {currentPage === 'collection-detail' && selectedCollectionId && (
+          <CollectionDetailPage
+            collectionId={selectedCollectionId}
+            context={appContext}
+            onBack={() => navigateTo('collections')}
+          />
+        )}
+        {currentPage === 'auctions' && <AuctionsPage context={appContext} />}
+        {currentPage === 'profile' && <ProfilePage context={appContext} />}
+      </main>
+
+      <Footer />
 
       {showAlertModal && (
         <AlertModal
