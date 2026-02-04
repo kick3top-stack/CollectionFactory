@@ -7,6 +7,7 @@ import { AuctionsPage } from './components/AuctionsPage';
 import { ProfilePage } from './components/ProfilePage';
 import { Navigation } from './components/Navigation';
 import { AlertModal } from './components/AlertModal';
+import { Footer } from './components/Footer';
 import { ethers } from 'ethers';
 import { getCollectionFactoryContract } from './blockchain/contracts/factoryContract';
 import { getNFTContract } from './blockchain/contracts/nftContract';
@@ -453,27 +454,33 @@ function App() {
   };
 
   return (
-    <div className="app-shell">
-      <Navigation 
-        currentPage={currentPage} 
+    <div className="app-shell flex flex-col">
+      <Navigation
+        currentPage={currentPage}
         onNavigate={navigateTo}
         context={appContext}
       />
-      
-      {currentPage === 'home' && <Home context={appContext} onNavigate={navigateTo} />}
-      {currentPage === 'create' && <CreatePage context={appContext} />}
-      {currentPage === 'collections' && (
-        <CollectionsPage context={appContext} onNavigate={navigateTo} />
-      )}
-      {currentPage === 'collection-detail' && selectedCollectionId && (
-        <CollectionDetailPage
-          collectionId={selectedCollectionId}
-          context={appContext}
-          onBack={() => navigateTo('collections')}
-        />
-      )}
-      {currentPage === 'auctions' && <AuctionsPage context={appContext} />}
-      {currentPage === 'profile' && <ProfilePage context={appContext} />}
+
+      <main className="flex-1">
+        {currentPage === 'home' && (
+          <Home context={appContext} onNavigate={navigateTo} />
+        )}
+        {currentPage === 'create' && <CreatePage context={appContext} />}
+        {currentPage === 'collections' && (
+          <CollectionsPage context={appContext} onNavigate={navigateTo} />
+        )}
+        {currentPage === 'collection-detail' && selectedCollectionId && (
+          <CollectionDetailPage
+            collectionId={selectedCollectionId}
+            context={appContext}
+            onBack={() => navigateTo('collections')}
+          />
+        )}
+        {currentPage === 'auctions' && <AuctionsPage context={appContext} />}
+        {currentPage === 'profile' && <ProfilePage context={appContext} />}
+      </main>
+
+      <Footer />
 
       {showAlertModal && (
         <AlertModal
