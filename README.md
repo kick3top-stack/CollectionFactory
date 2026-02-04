@@ -92,7 +92,124 @@ The frontend talks to the deployed contracts via ABIs in `frontend/src/abi/`.
 
 ---
 
-## 🛠 Development
+## Local Setup
+
+1. **Clone the repo**
+   ```bash
+   git clone <repo-url>
+   cd CollectionFactory
+   ```
+
+2. **Install dependencies** (run in both folders)
+   ```bash
+   cd smartcontract && npm install && cd ..
+   cd frontend && npm install && cd ..
+   ```
+
+3. **Start a local Hardhat node** (in a separate terminal)
+   ```bash
+   cd smartcontract
+   npx hardhat node
+   ```
+   Keep this running (default: `http://127.0.0.1:8545`).
+
+4. **Deploy contracts** to the local node (see [Deployment guide](#deployment-guide) below). For local dev:
+   ```bash
+   cd smartcontract
+   npx hardhat run scripts/deploy.js --network localhost
+   ```
+   Copy the printed Factory and Marketplace addresses.
+
+5. **Connect the frontend to your deployment**
+   - From the repo root, copy ABIs into the frontend:
+     ```bash
+     node frontend/copy-abis.js
+     ```
+   - Update `frontend/src/blockchain/contracts/addresses.js` with the addresses from step 4.
+   - For local chain, add chain ID `31337` to `frontend/src/abi/networks.js` (see [Supported networks](#supported-networks)).
+
+6. **Run the frontend**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   Open the dev server (usually `http://localhost:5173`). In your wallet, switch to the local Hardhat network (e.g. add `http://127.0.0.1:8545` with chain ID `31337`).
+
+Optional: create `frontend/.env` with Pinata keys for IPFS uploads:
+```bash
+VITE_APP_PINATA_KEY=your_pinata_key
+VITE_APP_PINATA_SECRET=your_pinata_secret
+```
+
+---
+
+## Supported networks
+
+The app can run against:
+
+| Environment | Network        | Chain ID | Use case |
+| ----------- | --------------- | -------- | -------- |
+| **Local**   | Hardhat node    | 31337    | Development; run `npx hardhat node` then deploy with `--network localhost`. |
+| **Testnet** | Sepolia         | 11155111 | Staging; configure `INFURA_API_KEY` and `SEPOLIA_PRIVATE_KEY` in Hardhat (see below). |
+| **Mainnet** | Ethereum mainnet| 1        | Production; add mainnet in `hardhat.config.js` and in `frontend/src/abi/networks.js`; tune fees before deploying. |
+
+- **Frontend:** Supported chain IDs and labels are in `frontend/src/abi/networks.js`. Contract addresses are in `frontend/src/blockchain/contracts/addresses.js`. For a new network, add an entry to both (and deploy contracts to that network first).
+- **Wallet:** Users must connect to one of the supported chains; the UI will prompt to switch if they’re on a different network.
+
+---
+
+## Connecting the frontend to contracts
+
+1. **ABIs** – After compiling or changing contracts, sync ABIs to the frontend:
+   ```bash
+   node frontend/copy-abis.js
+   ```
+   This copies from `smartcontract/artifacts/contracts/` into `frontend/src/abi/` (`collectionFactoryAbi.json`, `marketplaceAbi.json`, `nftAbi.json`).
+
+2. **Addresses** – Edit `frontend/src/blockchain/contracts/addresses.js` and set:
+   - `COLLECTION_FACTORY_ADDRESS` – from Factory deployment.
+   - `MARKETPLACE_ADDRESS` – from Marketplace deployment.  
+   NFT collection addresses are per collection and come from the app (e.g. `CollectionCreated` events), not from this file.
+
+3. **Networks** – In `frontend/src/abi/networks.js`, ensure the chain ID you’re using (e.g. 31337 for local, 11155111 for Sepolia) is present in `SUPPORTED_NETWORKS` so the wallet and UI recognize it.
+
+---
+
+## Deployment guide
+
+### Local (Hardhat node)
+
+1. Start the node: `cd smartcontract && npx hardhat node`.
+2. In another terminal: `npx hardhat run scripts/deploy.js --network localhost`.
+3. Copy the logged Factory and Marketplace addresses into `frontend/src/blockchain/contracts/addresses.js`.
+4. Run `node frontend/copy-abis.js`, then start the frontend with `npm run dev` from `frontend/`.
+
+### Sepolia (testnet)
+
+1. In `smartcontract/`, configure [Hardhat vars](https://hardhat.org/hardhat-runner/docs/advanced/hardhat-runtime-environment#configuration-variables):
+   ```bash
+   npx hardhat vars set INFURA_API_KEY <your-infura-key>
+   npx hardhat vars set SEPOLIA_PRIVATE_KEY <your-sepolia-account-private-key>
+   ```
+2. Deploy:
+   ```bash
+   npx hardhat run scripts/deploy.js --network sepolia
+   ```
+3. Update `frontend/src/blockchain/contracts/addresses.js` with the new addresses and run `node frontend/copy-abis.js`. Sepolia (chain ID 11155111) is already in `frontend/src/abi/networks.js`.
+
+### Mainnet
+
+1. Add a mainnet entry in `smartcontract/hardhat.config.js` (e.g. `url`, `accounts`) and set any API keys via `vars` or env.
+2. **Tune fees** in the contracts (e.g. creation fee, mint fee, marketplace fee) and in the factory/marketplace logic before deploying.
+3. Run:
+   ```bash
+   npx hardhat run scripts/deploy.js --network mainnet
+   ```
+4. Add chain ID `1` and a label to `frontend/src/abi/networks.js`, and set the deployed addresses in `frontend/src/blockchain/contracts/addresses.js`.
+
+---
+
+## Development (reference)
 
 ### Smart contracts
 
@@ -104,20 +221,6 @@ npx hardhat compile
 npx hardhat test
 ```
 
-To deploy (example: Sepolia; adjust in `hardhat.config.js`):
-
-```bash
-npx hardhat run scripts/deploy.ts --network sepolia
-```
-
-After deployment, run the ABI copy script from the repo root:
-
-```bash
-node frontend/copy-abis.js
-```
-
-This ensures the frontend ABIs match the deployed bytecode.
-
 ### Frontend
 
 From `frontend/`:
@@ -126,15 +229,6 @@ From `frontend/`:
 npm install
 npm run dev
 ```
-
-Create a `.env` file in `frontend/`:
-
-```bash
-VITE_APP_PINATA_KEY=your_pinata_key
-VITE_APP_PINATA_SECRET=your_pinata_secret
-```
-
-Then open the dev server (usually `http://localhost:5173`).
 
 ---
 
